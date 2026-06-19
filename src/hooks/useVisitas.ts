@@ -1,14 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { visitasService } from '@/services/visitasService';
 import { Visita } from '@/types/database.types';
+import { getGroupedVisitas } from '@/app/actions/visitas';
 
 export function useVisitas() {
   const queryClient = useQueryClient();
 
-  // Query para buscar a lista de visitas técnicas
+  // Query para buscar a lista de visitas técnicas agrupadas vinda do servidor
   const visitasQuery = useQuery({
     queryKey: ['visitas'],
-    queryFn: visitasService.getVisitas,
+    queryFn: getGroupedVisitas,
   });
 
   // Mutação para preenchimento de relatório da visita pelo técnico
@@ -31,7 +32,13 @@ export function useVisitas() {
   });
 
   return {
-    visitas: visitasQuery.data || [],
+    visitas: visitasQuery.data?.rawVisitas || [],
+    hojeStr: visitasQuery.data?.hojeStr || '',
+    amanhaStr: visitasQuery.data?.amanhaStr || '',
+    atrasadas: visitasQuery.data?.atrasadas || [],
+    hoje: visitasQuery.data?.hoje || [],
+    amanha: visitasQuery.data?.amanha || [],
+    proximas: visitasQuery.data?.proximas || [],
     isLoading: visitasQuery.isLoading,
     error: visitasQuery.error,
     updateVisita: updateVisitaMutation.mutateAsync,

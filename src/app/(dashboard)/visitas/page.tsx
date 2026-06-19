@@ -1,19 +1,19 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useVisitas } from '@/hooks/useVisitas';
 import AgendaHeader from '@/components/crm/agenda-header';
-import AgendaTimeline from '@/components/crm/agenda-timeline';
 import ModalPreenchimentoVisita from '@/components/crm/modal-preenchimento-visita';
 import ModalAgendamentoVisita from '@/components/crm/modal-agendamento-visita';
+import VisitaCard from '@/components/crm/visita-card';
 import { Visita } from '@/types/database.types';
 
-// Dados simulados de fallback (para exibição caso o banco não esteja preenchido)
+// Dados simulados de fallback estruturados de forma robusta
 const MOCK_FALLBACK_VISITAS: Visita[] = [
   {
     id: 'v1',
     project_id: 'p1',
-    data_visita: '2026-06-18', // Hoje
+    data_visita: '', // Preenchido dinamicamente
     horario: '09:00',
     status_visita: 'Agendada',
     material_usado: ['Cabo Calefator 15W', 'Termostato Wifi Black'],
@@ -42,7 +42,7 @@ const MOCK_FALLBACK_VISITAS: Visita[] = [
   {
     id: 'v2',
     project_id: 'p2',
-    data_visita: '2026-06-18', // Hoje
+    data_visita: '', // Preenchido dinamicamente
     horario: '14:30',
     status_visita: 'Agendada',
     material_usado: [],
@@ -71,7 +71,7 @@ const MOCK_FALLBACK_VISITAS: Visita[] = [
   {
     id: 'v3',
     project_id: 'p3',
-    data_visita: '2026-06-19', // Amanhã
+    data_visita: '', // Preenchido dinamicamente
     horario: '10:00',
     status_visita: 'Agendada',
     material_usado: [],
@@ -100,7 +100,7 @@ const MOCK_FALLBACK_VISITAS: Visita[] = [
   {
     id: 'v4',
     project_id: 'p4',
-    data_visita: '2026-06-21', // Próximos dias
+    data_visita: '', // Preenchido dinamicamente
     horario: '11:00',
     status_visita: 'Agendada',
     material_usado: [],
@@ -125,12 +125,48 @@ const MOCK_FALLBACK_VISITAS: Visita[] = [
         criado_em: '2026-06-15T00:00:00Z'
       }
     }
+  },
+  // Item para demonstrar o Alerta de Atrasos no Mock
+  {
+    id: 'v-atrasada',
+    project_id: 'p1',
+    data_visita: '2026-06-05', // Data passada
+    horario: '15:00',
+    status_visita: 'Agendada',
+    material_usado: [],
+    valor_gasto: 0,
+    observacoes: 'Visita de vistoria atrasada devido a ajuste de agenda do cliente.',
+    criado_em: '2026-06-05T00:00:00Z',
+    projects: {
+      id: 'p1',
+      lead_id: 'l1',
+      status_projeto: 'Instalação',
+      endereco: 'Rua das Palmeiras, 405 - Cond. Royal - Curitiba',
+      valor_total: 12500,
+      criado_em: '2026-06-10T00:00:00Z',
+      leads: {
+        id: 'l1',
+        nome: 'Roberto Mendonça',
+        email: 'roberto@email.com',
+        telefone: '(41) 99999-1111',
+        cidade: 'Curitiba',
+        area_m2: 80,
+        status: 'Qualificado',
+        criado_em: '2026-06-08T00:00:00Z'
+      }
+    }
   }
 ];
 
 export default function DashboardVisitas() {
   const {
     visitas: dbVisitas,
+    hojeStr: dbHojeStr,
+    amanhaStr: dbAmanhaStr,
+    atrasadas: dbAtrasadas,
+    hoje: dbHoje,
+    amanha: dbAmanha,
+    proximas: dbProximas,
     isLoading,
     updateVisita,
     isUpdating,
@@ -149,9 +185,70 @@ export default function DashboardVisitas() {
   // Fallback local caso o banco esteja vazio
   const [localVisitasFallback, setLocalVisitasFallback] = useState<Visita[]>(MOCK_FALLBACK_VISITAS);
 
-  // Decide qual lista de visitas utilizar (banco se houver dados, senão fallback simulado)
   const isDbConfigured = dbVisitas.length > 0;
-  const listVisitas = isDbConfigured ? dbVisitas : localVisitasFallback;
+
+  // Gerar datas no fuso horário do Brasil para o mock, se necessário
+  const clientDates = useMemo(() => {
+    const now = new Date();
+    const formatTZ = (d: Date) => {
+      const formatted = new Intl.DateTimeFormat('pt-BR', {
+        timeZone: 'America/Sao_Paulo',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(d);
+      const [day, month, year] = formatted.split('/');
+      return `${year}-${month}-${day}`;
+    };
+    const hoje = formatTZ(now);
+    const tomorrow = new Date(now);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const amanha = formatTZ(tomorrow);
+    return { hoje, amanha };
+  }, []);
+
+  const hojeStr = isDbConfigured ? dbHojeStr : clientDates.hoje;
+  const amanhaStr = isDbConfigured ? dbAmanhaStr : clientDates.amanha;
+
+  // Agrupamento em memória dos dados locais quando o banco não estiver configurado
+  const groupedFallback = useMemo(() => {
+    const list = localVisitasFallback.map((v) => {
+      let date = v.data_visita;
+      if (!date) {
+        if (v.id === 'v1' || v.id === 'v2') {
+          date = hojeStr;
+        } else if (v.id === 'v3') {
+          date = amanhaStr;
+        } else if (v.id === 'v4') {
+          const future = new Date();
+          future.setDate(future.getDate() + 3);
+          const formatted = new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+          }).format(future);
+          const [day, month, year] = formatted.split('/');
+          date = `${year}-${month}-${day}`;
+        }
+      }
+      return { ...v, data_visita: date };
+    });
+
+    const atrasadas = list.filter((v) => v.data_visita < hojeStr && v.status_visita === 'Agendada');
+    const hoje = list.filter((v) => v.data_visita === hojeStr);
+    const amanha = list.filter((v) => v.data_visita === amanhaStr);
+    const proximas = list.filter((v) => v.data_visita > amanhaStr);
+
+    return { atrasadas, hoje, amanha, proximas, raw: list };
+  }, [localVisitasFallback, hojeStr, amanhaStr]);
+
+  // Escolhe os grupos com base na presença de dados do banco
+  const activeAtrasadas = isDbConfigured ? dbAtrasadas : groupedFallback.atrasadas;
+  const activeHoje = isDbConfigured ? dbHoje : groupedFallback.hoje;
+  const activeAmanha = isDbConfigured ? dbAmanha : groupedFallback.amanha;
+  const activeProximas = isDbConfigured ? dbProximas : groupedFallback.proximas;
+  const activeRaw = isDbConfigured ? dbVisitas : groupedFallback.raw;
 
   const handleOpenModal = (visita: Visita) => {
     setSelectedVisita(visita);
@@ -165,10 +262,8 @@ export default function DashboardVisitas() {
 
   const handleSaveReport = async (id: string, updates: Partial<Visita>) => {
     if (isDbConfigured) {
-      // Caso o Supabase esteja ativo, executa a mutação
       await updateVisita({ id, updates });
     } else {
-      // Caso contrário, atualiza o estado local para manter a interatividade do mockup
       setLocalVisitasFallback((prev) =>
         prev.map((v) => (v.id === id ? { ...v, ...updates } : v))
       );
@@ -188,8 +283,7 @@ export default function DashboardVisitas() {
     if (isDbConfigured) {
       await createVisita(novaVisita);
     } else {
-      // Cria registro mockado
-      const newId = `v${localVisitasFallback.length + 1}`;
+      const newId = `v-local-${Date.now()}`;
       const newRecord: Visita = {
         id: newId,
         project_id: novaVisita.project_id,
@@ -226,38 +320,43 @@ export default function DashboardVisitas() {
     }
   };
 
-  // Filtragem dinâmica
-  const filteredVisitas = listVisitas.filter((v) => {
-    // Filtro por Status
-    if (statusFilter !== 'Todas' && v.status_visita !== statusFilter) {
-      return false;
-    }
-    // Filtro por termo de busca (cliente, endereço ou observações)
-    if (searchTerm.trim() !== '') {
-      const term = searchTerm.toLowerCase();
-      const nomeCliente = (v.projects?.leads?.nome || v.cliente || '').toLowerCase();
-      const endereco = (v.projects?.endereco || v.endereco || '').toLowerCase();
-      const observacoes = (v.observacoes || '').toLowerCase();
-      return (
-        nomeCliente.includes(term) ||
-        endereco.includes(term) ||
-        observacoes.includes(term)
-      );
-    }
-    return true;
-  });
+  // Helper de filtragem para aplicar os filtros globais (busca e status)
+  const applyFilters = (list: Visita[]) => {
+    return list.filter((v) => {
+      // Filtro por Status
+      if (statusFilter !== 'Todas' && v.status_visita !== statusFilter) {
+        return false;
+      }
+      // Filtro por termo de busca
+      if (searchTerm.trim() !== '') {
+        const term = searchTerm.toLowerCase();
+        const nomeCliente = (v.projects?.leads?.nome || v.cliente || '').toLowerCase();
+        const endereco = (v.projects?.endereco || v.endereco || '').toLowerCase();
+        const observacoes = (v.observacoes || '').toLowerCase();
+        return (
+          nomeCliente.includes(term) ||
+          endereco.includes(term) ||
+          observacoes.includes(term)
+        );
+      }
+      return true;
+    });
+  };
 
-  // Cálculos de KPIs baseados na lista total (completa)
-  const hojeStr = '2026-06-18';
-  const visitasHoje = listVisitas.filter((v) => v.data_visita === hojeStr);
-  const totalHoje = visitasHoje.filter((v) => v.status_visita === 'Agendada').length;
-  const materiaisPendentesCount = listVisitas.filter(
+  // Filtrar os grupos separadamente para preservar o design das colunas
+  const atrasadasFiltered = useMemo(() => applyFilters(activeAtrasadas), [activeAtrasadas, searchTerm, statusFilter]);
+  const hojeFiltered = useMemo(() => applyFilters(activeHoje), [activeHoje, searchTerm, statusFilter]);
+  const amanhaFiltered = useMemo(() => applyFilters(activeAmanha), [activeAmanha, searchTerm, statusFilter]);
+  const proximasFiltered = useMemo(() => applyFilters(activeProximas), [activeProximas, searchTerm, statusFilter]);
+
+  // KPIs
+  const totalHoje = activeHoje.filter((v) => v.status_visita === 'Agendada').length;
+  const materiaisPendentesCount = activeRaw.filter(
     (v) => !v.material_usado || v.material_usado.length === 0
   ).length;
-
-  const visitasExecutadas = listVisitas.filter((v) => v.status_visita !== 'Agendada').length;
+  const visitasExecutadas = activeRaw.filter((v) => v.status_visita !== 'Agendada').length;
   const taxaConclusao =
-    listVisitas.length > 0 ? Math.round((visitasExecutadas / listVisitas.length) * 100) : 0;
+    activeRaw.length > 0 ? Math.round((visitasExecutadas / activeRaw.length) * 100) : 0;
 
   if (isLoading && isDbConfigured) {
     return (
@@ -275,8 +374,9 @@ export default function DashboardVisitas() {
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-6 md:p-10">
-      <div className="max-w-6xl mx-auto space-y-8">
-        {/* Componente KPIs e Cabeçalho */}
+      <div className="max-w-6xl mx-auto space-y-7">
+        
+        {/* Header e KPIs */}
         <AgendaHeader
           totalHoje={totalHoje}
           materiaisPendentesCount={materiaisPendentesCount}
@@ -288,29 +388,117 @@ export default function DashboardVisitas() {
           onAgendarClick={() => setIsAgendarModalOpen(true)}
         />
 
-        {/* Componente Timeline por Dias (com dados filtrados) */}
-        {filteredVisitas.length === 0 ? (
-          <div className="bg-white border border-gray-100 rounded-2xl p-14 text-center shadow-sm">
-            <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
-              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+        {/* 1. Alerta de Atrasos */}
+        {atrasadasFiltered.length > 0 && (
+          <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 md:p-5 flex items-start gap-4 shadow-sm animate-pulse">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <p className="text-gray-400 text-sm font-medium">Nenhuma visita atende aos filtros aplicados.</p>
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="mt-3 text-xs text-orange-500 hover:text-orange-600 hover:underline font-bold"
-              >
-                Limpar busca
-              </button>
-            )}
+            <div className="flex-1 min-w-0">
+              <h3 className="text-sm font-black text-rose-800">Atenção: Existem visitas técnicas em atraso!</h3>
+              <p className="text-xs text-rose-600 mt-1 leading-relaxed">
+                As seguintes visitas estão agendadas para datas passadas e ainda não foram marcadas como concluídas (Realizada/Cancelada):
+              </p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {atrasadasFiltered.map((v) => {
+                  const clienteNome = v.projects?.leads?.nome || v.cliente;
+                  return (
+                    <button
+                      key={v.id}
+                      onClick={() => handleOpenModal(v)}
+                      className="px-3 py-1 bg-white border border-rose-200 hover:border-rose-400 text-[10px] font-bold text-rose-700 rounded-lg shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                      {clienteNome} ({v.data_visita.split('-').reverse().slice(0, 2).join('/')})
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        ) : (
-          <AgendaTimeline visitas={filteredVisitas} onOpenModal={handleOpenModal} />
         )}
 
-        {/* Componente Modal de Preenchimento Técnico */}
+        {/* 2. Grid de Agendamento (Hoje e Amanhã) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Coluna 1: Hoje */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 md:p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-50">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse" />
+                <h2 className="text-base font-black text-gray-900">Visitas de Hoje</h2>
+              </div>
+              <span className="text-[10px] font-black bg-orange-50 border border-orange-200 text-orange-600 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                {hojeFiltered.length} {hojeFiltered.length === 1 ? 'Agendamento' : 'Agendamentos'}
+              </span>
+            </div>
+
+            <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+              {hojeFiltered.length === 0 ? (
+                <div className="text-center py-12 text-gray-400 italic text-sm">
+                  Nenhuma visita agendada para hoje.
+                </div>
+              ) : (
+                hojeFiltered.map((v) => (
+                  <VisitaCard key={v.id} visita={v} onOpenModal={handleOpenModal} />
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Coluna 2: Amanhã */}
+          <div className="bg-white border border-gray-100 rounded-2xl p-5 md:p-6 shadow-sm space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-gray-50">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                <h2 className="text-base font-black text-gray-900">Visitas de Amanhã</h2>
+              </div>
+              <span className="text-[10px] font-black bg-blue-50 border border-blue-200 text-blue-600 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                {amanhaFiltered.length} {amanhaFiltered.length === 1 ? 'Agendamento' : 'Agendamentos'}
+              </span>
+            </div>
+
+            <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
+              {amanhaFiltered.length === 0 ? (
+                <div className="text-center py-12 text-gray-400 italic text-sm">
+                  Nenhuma visita agendada para amanhã.
+                </div>
+              ) : (
+                amanhaFiltered.map((v) => (
+                  <VisitaCard key={v.id} visita={v} onOpenModal={handleOpenModal} />
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Lista de Próximas */}
+        <div className="bg-white border border-gray-100 rounded-2xl p-5 md:p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between pb-3 border-b border-gray-50">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-purple-500" />
+              <h2 className="text-base font-black text-gray-900">Cronograma de Próximas Visitas</h2>
+            </div>
+            <span className="text-[10px] font-black bg-purple-50 border border-purple-200 text-purple-600 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+              {proximasFiltered.length} {proximasFiltered.length === 1 ? 'Visita' : 'Visitas'}
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {proximasFiltered.length === 0 ? (
+              <div className="text-center py-8 text-gray-400 italic text-sm">
+                Nenhuma outra visita futura agendada.
+              </div>
+            ) : (
+              proximasFiltered.map((v) => (
+                <VisitaCard key={v.id} visita={v} onOpenModal={handleOpenModal} showDate />
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* Modal de Edição */}
         <ModalPreenchimentoVisita
           isOpen={isModalOpen}
           visita={selectedVisita}
@@ -319,7 +507,7 @@ export default function DashboardVisitas() {
           isSaving={isUpdating}
         />
 
-        {/* Componente Modal de Agendamento */}
+        {/* Modal de Agendamento */}
         <ModalAgendamentoVisita
           isOpen={isAgendarModalOpen}
           onClose={() => setIsAgendarModalOpen(false)}

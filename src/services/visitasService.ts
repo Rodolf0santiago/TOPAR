@@ -32,6 +32,9 @@ export const visitasService = {
         material_usado: updates.material_usado,
         valor_gasto: updates.valor_gasto,
         observacoes: updates.observacoes,
+        data_visita: updates.data_visita,
+        horario: updates.horario,
+        tecnico_id: updates.tecnico_id,
       })
       .eq('id', id)
       .select()

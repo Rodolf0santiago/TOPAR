@@ -208,7 +208,7 @@ export default function ResponsaveisTecnicosPage() {
             </div>
           </div>
 
-          {/* Listagem de Técnicos */}
+          {/* Listagem de Técnicos em Formato de Tabela */}
           <div className="lg:col-span-2 space-y-5">
 
             {/* Barra de Busca */}
@@ -229,7 +229,7 @@ export default function ResponsaveisTecnicosPage() {
               </div>
             </div>
 
-            {/* Cards */}
+            {/* Tabela de Técnicos */}
             {isLoading ? (
               <div className="flex justify-center items-center py-16">
                 <svg className="animate-spin h-8 w-8 text-orange-500" fill="none" viewBox="0 0 24 24">
@@ -247,62 +247,76 @@ export default function ResponsaveisTecnicosPage() {
                 <p className="text-gray-400 text-sm font-medium">Nenhum técnico encontrado.</p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {filteredResponsaveis.map((tecnico, idx) => {
-                  const avatarGradient = AVATAR_COLORS[idx % AVATAR_COLORS.length];
-                  const initials = tecnico.nome.split(' ').slice(0, 2).map((n) => n[0]).join('').toUpperCase();
-                  return (
-                    <div
-                      key={tecnico.id}
-                      className="bg-white border border-gray-100 hover:border-orange-200 hover:shadow-md p-5 rounded-2xl transition-all group"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-white font-black text-sm shadow-md shrink-0`}>
-                          {initials}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-black text-gray-900 text-base leading-tight group-hover:text-orange-600 transition-colors">
-                            {tecnico.nome}
-                          </h3>
-                          <span className="inline-block text-[9px] font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full uppercase tracking-wider mt-1">
-                            Técnico Credenciado
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 space-y-2 border-t border-gray-100 pt-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
-                            </svg>
-                          </div>
-                          <span className="text-sm text-gray-700 font-semibold">{tecnico.telefone}</span>
-                        </div>
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-6 h-6 rounded-lg bg-gray-100 flex items-center justify-center shrink-0">
-                            <svg className="w-3.5 h-3.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                          <span className="text-xs text-gray-500 font-medium truncate" title={tecnico.email}>
-                            {tecnico.email}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
-                        <span className="text-[10px] text-gray-400 font-medium">
-                          Desde {new Date(tecnico.created_at).toLocaleDateString('pt-BR')}
-                        </span>
-                        <span className="flex items-center gap-1 text-[10px] font-bold text-emerald-600">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          Ativo
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
+              <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-100 text-xs font-bold uppercase tracking-wider text-gray-400">
+                        <th className="py-4 px-6">Técnico</th>
+                        <th className="py-4 px-6">Contato</th>
+                        <th className="py-4 px-6">Cadastro</th>
+                        <th className="py-4 px-6">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {filteredResponsaveis.map((tecnico, idx) => {
+                        const avatarGradient = AVATAR_COLORS[idx % AVATAR_COLORS.length];
+                        const initials = tecnico.nome
+                          .split(' ')
+                          .slice(0, 2)
+                          .map((n) => n[0])
+                          .join('')
+                          .toUpperCase();
+                        return (
+                          <tr key={tecnico.id} className="hover:bg-gray-50/50 transition-colors group">
+                            <td className="py-4 px-6">
+                              <div className="flex items-center gap-3">
+                                <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${avatarGradient} flex items-center justify-center text-white font-black text-xs shadow-sm shrink-0`}>
+                                  {initials}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-bold text-gray-900 group-hover:text-orange-600 transition-colors">
+                                    {tecnico.nome}
+                                  </p>
+                                  <span className="text-[9px] font-bold text-orange-600 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded-full uppercase tracking-wider mt-0.5 inline-block">
+                                    Técnico Credenciado
+                                  </span>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <div className="space-y-0.5">
+                                <p className="text-sm text-gray-700 font-semibold flex items-center gap-1.5">
+                                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.94.725l.548 2.2a1 1 0 01-.321.988l-1.305.98a10.582 10.582 0 004.872 4.872l.98-1.305a1 1 0 01.988-.321l2.2.548a1 1 0 01.725.94V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                  </svg>
+                                  {tecnico.telefone}
+                                </p>
+                                <p className="text-xs text-gray-400 font-medium truncate flex items-center gap-1.5 animate-fade-in" title={tecnico.email}>
+                                  <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                  </svg>
+                                  {tecnico.email}
+                                </p>
+                              </div>
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className="text-xs text-gray-500 font-medium">
+                                {new Date(tecnico.created_at).toLocaleDateString('pt-BR')}
+                              </span>
+                            </td>
+                            <td className="py-4 px-6">
+                              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-50 border border-emerald-200 text-emerald-700">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                Ativo
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

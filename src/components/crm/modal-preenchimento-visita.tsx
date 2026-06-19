@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Visita } from '@/types/database.types';
+import { useResponsaveis } from '@/hooks/useResponsaveis';
 
 interface ModalPreenchimentoVisitaProps {
   isOpen: boolean;
@@ -9,6 +10,12 @@ interface ModalPreenchimentoVisitaProps {
   isSaving: boolean;
 }
 
+function formatDisplayDate(val: string) {
+  if (!val) return '';
+  const [y, m, d] = val.split('-');
+  return `${d}/${m}/${y}`;
+}
+
 export default function ModalPreenchimentoVisita({
   isOpen,
   visita,
@@ -16,8 +23,19 @@ export default function ModalPreenchimentoVisita({
   onSave,
   isSaving,
 }: ModalPreenchimentoVisitaProps) {
+  const { responsaveis: dbResponsaveis } = useResponsaveis();
   const [localVisita, setLocalVisita] = useState<Visita | null>(null);
   const [materialInput, setMaterialInput] = useState('');
+
+  const dateInputRef = useRef<HTMLInputElement>(null);
+  const timeInputRef = useRef<HTMLInputElement>(null);
+
+  const MOCK_FALLBACK_TECNICOS = [
+    { id: 't1', nome: 'Carlos Eduardo Silva' },
+    { id: 't2', nome: 'Fernanda Lima Souza' },
+    { id: 't3', nome: 'Rodrigo Medeiros' },
+  ];
+  const responsaveis = dbResponsaveis.length > 0 ? dbResponsaveis : MOCK_FALLBACK_TECNICOS;
 
   useEffect(() => {
     if (visita) {
@@ -25,6 +43,7 @@ export default function ModalPreenchimentoVisita({
     } else {
       setLocalVisita(null);
     }
+    setMaterialInput('');
   }, [visita]);
 
   if (!isOpen || !localVisita) return null;
@@ -53,6 +72,9 @@ export default function ModalPreenchimentoVisita({
         material_usado: localVisita.material_usado,
         valor_gasto: localVisita.valor_gasto,
         observacoes: localVisita.observacoes,
+        data_visita: localVisita.data_visita,
+        horario: localVisita.horario,
+        tecnico_id: localVisita.tecnico_id,
       });
       onClose();
     } catch (err) {
@@ -61,6 +83,8 @@ export default function ModalPreenchimentoVisita({
   };
 
   const clienteNome = localVisita.projects?.leads?.nome || localVisita.cliente;
+  const selectClass = "w-full bg-gray-50 border border-gray-200 hover:border-gray-300 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 rounded-xl pl-9 pr-4 py-2.5 text-gray-800 outline-none transition-all text-sm cursor-pointer appearance-none";
+  const labelClass = "text-xs font-bold uppercase tracking-wider text-gray-500";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -72,7 +96,7 @@ export default function ModalPreenchimentoVisita({
         {/* Header */}
         <div className="p-6 border-b border-gray-100 flex justify-between items-start">
           <div>
-            <h3 className="text-xl font-black text-gray-900">Atualizar Visita Técnica</h3>
+            <h3 className="text-xl font-black text-gray-900">Editar Visita Técnica</h3>
             <p className="text-xs text-gray-500 mt-1">
               Cliente: <strong className="text-gray-700">{clienteNome}</strong>
             </p>
@@ -88,7 +112,7 @@ export default function ModalPreenchimentoVisita({
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+        <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
 
           {/* Status */}
           <div className="space-y-2">
@@ -104,14 +128,101 @@ export default function ModalPreenchimentoVisita({
                       ? status === 'Realizada'
                         ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30'
                         : status === 'Cancelada'
-                        ? 'bg-rose-500 border-rose-500 text-white shadow-sm shadow-rose-500/30'
-                        : 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/30'
+                        ? 'bg-rose-50 border-rose-500 text-white shadow-sm shadow-rose-500/30'
+                        : 'bg-amber-50 border-amber-500 text-white shadow-sm shadow-amber-500/30'
                       : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-100'
                   }`}
                 >
                   {status}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Técnico */}
+          <div className="space-y-1.5">
+            <label htmlFor="tecnico_id" className={labelClass}>Técnico Responsável</label>
+            <div className="relative">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              <select
+                id="tecnico_id"
+                value={localVisita.tecnico_id || ''}
+                onChange={(e) => handleFieldChange('tecnico_id', e.target.value || null)}
+                className={selectClass}
+              >
+                <option value="">Selecionar técnico depois</option>
+                {responsaveis.map((tec) => (
+                  <option key={tec.id} value={tec.id}>{tec.nome}</option>
+                ))}
+              </select>
+              <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
+
+          {/* Data + Horário */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Data */}
+            <div className="space-y-1.5">
+              <label className={labelClass}>Data da Visita</label>
+              <div
+                className="relative flex items-center bg-gray-50 border border-gray-200 hover:border-orange-300 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100 rounded-xl transition-all overflow-hidden cursor-pointer"
+                onClick={() => dateInputRef.current?.showPicker?.() || dateInputRef.current?.focus()}
+              >
+                <svg className="w-4 h-4 text-gray-400 ml-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span className="flex-1 pl-2 py-2.5 text-sm text-gray-700 select-none font-medium">
+                  {localVisita.data_visita ? formatDisplayDate(localVisita.data_visita) : 'Selecionar data'}
+                </span>
+                <input
+                  ref={dateInputRef}
+                  type="date"
+                  id="data_visita"
+                  value={localVisita.data_visita || ''}
+                  onChange={(e) => handleFieldChange('data_visita', e.target.value)}
+                  required
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                />
+                <div className="px-3 py-2.5 bg-orange-50 border-l border-orange-200 text-orange-500 shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+
+            {/* Horário */}
+            <div className="space-y-1.5">
+              <label className={labelClass}>Horário</label>
+              <div
+                className="relative flex items-center bg-gray-50 border border-gray-200 hover:border-orange-300 focus-within:border-orange-400 focus-within:ring-2 focus-within:ring-orange-100 rounded-xl transition-all overflow-hidden cursor-pointer"
+                onClick={() => timeInputRef.current?.showPicker?.() || timeInputRef.current?.focus()}
+              >
+                <svg className="w-4 h-4 text-gray-400 ml-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="flex-1 pl-2 py-2.5 text-sm text-gray-700 font-mono font-bold select-none">
+                  {localVisita.horario ? localVisita.horario.substring(0, 5) : '09:00'}
+                </span>
+                <input
+                  ref={timeInputRef}
+                  type="time"
+                  id="horario"
+                  value={localVisita.horario || ''}
+                  onChange={(e) => handleFieldChange('horario', e.target.value)}
+                  required
+                  className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                />
+                <div className="px-3 py-2.5 bg-orange-50 border-l border-orange-200 text-orange-500 shrink-0">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -183,7 +294,7 @@ export default function ModalPreenchimentoVisita({
             </label>
             <textarea
               id="observacoes"
-              rows={4}
+              rows={3}
               placeholder="Relato detalhado da execução, ocorrências ou pendências..."
               value={localVisita.observacoes || ''}
               onChange={(e) => handleFieldChange('observacoes', e.target.value)}
