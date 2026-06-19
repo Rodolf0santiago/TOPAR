@@ -9,4 +9,11 @@ if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_A
   );
 }
 
+// Cliente padrão para Client Components (navegador)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+// Helper para instanciar no servidor (Server Components e API Routes)
+export function createServerClient() {
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
+  return createClient(supabaseUrl, supabaseServiceKey);
+}
