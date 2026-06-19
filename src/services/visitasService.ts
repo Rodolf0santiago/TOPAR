@@ -8,7 +8,7 @@ export const visitasService = {
   async getVisitas(): Promise<Visita[]> {
     const { data, error } = await supabase
       .from('visits')
-      .select('*, projects(*, leads(*))')
+      .select('*, projects(*, leads(*)), responsaveis_tecnicos(*)')
       .order('data_visita', { ascending: true })
       .order('horario', { ascending: true });
 
@@ -52,6 +52,7 @@ export const visitasService = {
     horario: string;
     status_visita?: 'Agendada' | 'Realizada' | 'Cancelada';
     observacoes?: string;
+    tecnico_id?: string | null;
   }): Promise<Visita> {
     const { data, error } = await supabase
       .from('visits')
@@ -64,9 +65,10 @@ export const visitasService = {
           material_usado: [],
           valor_gasto: 0,
           observacoes: visita.observacoes || '',
+          tecnico_id: visita.tecnico_id || null,
         },
       ])
-      .select('*, projects(*, leads(*))')
+      .select('*, projects(*, leads(*)), responsaveis_tecnicos(*)')
       .single();
 
     if (error) {

@@ -36,7 +36,18 @@ export interface Visita {
   valor_gasto: number;
   observacoes: string | null;
   criado_em: string;
+  tecnico_id?: string | null;
   cliente?: string; // Propriedade opcional para dados de mockup local
   endereco?: string; // Propriedade opcional para dados de mockup local
   projects?: Project & { leads?: Lead | null } | null;
+  responsaveis_tecnicos?: ResponsavelTecnico | null;
 }
+
+export interface ResponsavelTecnico {
+  id: string;
+  nome: string;
+  telefone: string;
+  email: string;
+  created_at: string;
+}
+

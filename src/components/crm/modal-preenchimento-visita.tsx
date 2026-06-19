@@ -19,7 +19,6 @@ export default function ModalPreenchimentoVisita({
   const [localVisita, setLocalVisita] = useState<Visita | null>(null);
   const [materialInput, setMaterialInput] = useState('');
 
-  // Sincroniza o estado local sempre que a visita selecionada mudar
   useEffect(() => {
     if (visita) {
       setLocalVisita({ ...visita });
@@ -65,50 +64,49 @@ export default function ModalPreenchimentoVisita({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Overlay Escuro */}
-      <div onClick={onClose} className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm" />
+      <div onClick={onClose} className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm" />
 
-      {/* Conteúdo do Modal */}
-      <div className="relative bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-200">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-amber-500" />
+      <div className="relative bg-white rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 to-amber-400" />
 
-        {/* Header Modal */}
-        <div className="p-6 border-b border-slate-800 flex justify-between items-start">
+        {/* Header */}
+        <div className="p-6 border-b border-gray-100 flex justify-between items-start">
           <div>
-            <h3 className="text-xl font-bold text-slate-100">Atualizar Visita Técnica</h3>
-            <p className="text-xs text-slate-400 mt-1">{clienteNome}</p>
+            <h3 className="text-xl font-black text-gray-900">Atualizar Visita Técnica</h3>
+            <p className="text-xs text-gray-500 mt-1">
+              Cliente: <strong className="text-gray-700">{clienteNome}</strong>
+            </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-500 hover:text-slate-350 transition-colors p-1 cursor-pointer"
+            className="text-gray-300 hover:text-gray-600 transition-colors p-1.5 cursor-pointer rounded-xl hover:bg-gray-100"
           >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
 
-        {/* Body Modal / Formulário */}
+        {/* Body */}
         <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
-          {/* Status da Visita */}
+
+          {/* Status */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Status do Serviço
-            </label>
-            <div className="flex gap-3">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Status do Serviço</label>
+            <div className="flex gap-2">
               {(['Agendada', 'Realizada', 'Cancelada'] as const).map((status) => (
                 <button
                   key={status}
                   type="button"
                   onClick={() => handleFieldChange('status_visita', status)}
-                  className={`flex-1 py-2 px-3 rounded-lg text-sm font-semibold border transition-all cursor-pointer ${
+                  className={`flex-1 py-2.5 px-3 rounded-xl text-sm font-bold border transition-all cursor-pointer ${
                     localVisita.status_visita === status
                       ? status === 'Realizada'
-                        ? 'bg-emerald-500/10 border-emerald-500 text-emerald-400 shadow-md shadow-emerald-500/5'
+                        ? 'bg-emerald-500 border-emerald-500 text-white shadow-sm shadow-emerald-500/30'
                         : status === 'Cancelada'
-                        ? 'bg-rose-500/10 border-rose-500 text-rose-400 shadow-md shadow-rose-500/5'
-                        : 'bg-amber-500/10 border-amber-500 text-amber-400 shadow-md shadow-amber-500/5'
-                      : 'bg-slate-950 border-slate-800 text-slate-500 hover:border-slate-700'
+                        ? 'bg-rose-500 border-rose-500 text-white shadow-sm shadow-rose-500/30'
+                        : 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/30'
+                      : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300 hover:bg-gray-100'
                   }`}
                 >
                   {status}
@@ -117,27 +115,23 @@ export default function ModalPreenchimentoVisita({
             </div>
           </div>
 
-          {/* Materiais Usados (Tags) */}
+          {/* Materiais */}
           <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Materiais Utilizados
-            </label>
-
-            {/* Lista de tags atuais */}
-            <div className="flex flex-wrap gap-2 mb-3">
+            <label className="text-xs font-bold uppercase tracking-wider text-gray-500">Materiais Utilizados</label>
+            <div className="flex flex-wrap gap-2 min-h-[36px]">
               {(!localVisita.material_usado || localVisita.material_usado.length === 0) ? (
-                <span className="text-xs text-slate-500 italic">Nenhum material adicionado ainda.</span>
+                <span className="text-xs text-gray-400 italic py-1">Nenhum material adicionado ainda.</span>
               ) : (
                 localVisita.material_usado.map((mat, i) => (
                   <span
                     key={i}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 bg-slate-950 border border-slate-800 text-slate-300 rounded-md text-xs font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 bg-orange-50 border border-orange-200 text-orange-700 rounded-full text-xs font-semibold"
                   >
                     {mat}
                     <button
                       type="button"
                       onClick={() => handleRemoveMaterial(i)}
-                      className="text-slate-500 hover:text-rose-400 transition-colors ml-1 font-bold cursor-pointer"
+                      className="text-orange-400 hover:text-rose-500 transition-colors font-black cursor-pointer"
                     >
                       ✕
                     </button>
@@ -145,32 +139,30 @@ export default function ModalPreenchimentoVisita({
                 ))
               )}
             </div>
-
-            {/* Input para adicionar material */}
             <form onSubmit={handleAddMaterial} className="flex gap-2">
               <input
                 type="text"
                 placeholder="Adicionar material (ex: Cabo Térmico 20W)"
                 value={materialInput}
                 onChange={(e) => setMaterialInput(e.target.value)}
-                className="flex-1 bg-slate-950 border border-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-3 py-2 text-slate-200 outline-none transition-all text-sm"
+                className="flex-1 bg-gray-50 border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 rounded-xl px-4 py-2.5 text-gray-800 placeholder-gray-400 outline-none transition-all text-sm"
               />
               <button
                 type="submit"
-                className="bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-200 px-4 rounded-lg font-medium text-sm transition-colors cursor-pointer"
+                className="bg-gray-100 hover:bg-orange-50 border border-gray-200 hover:border-orange-300 text-gray-600 hover:text-orange-600 px-4 rounded-xl font-bold text-sm transition-all cursor-pointer"
               >
-                Adicionar
+                + Adicionar
               </button>
             </form>
           </div>
 
-          {/* Custos Extras / Valores */}
+          {/* Custos Extras */}
           <div className="space-y-2">
-            <label htmlFor="valor_gasto" className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-              Custos Extras / Despesas Adicionais (R$)
+            <label htmlFor="valor_gasto" className="text-xs font-bold uppercase tracking-wider text-gray-500">
+              Custos Extras / Despesas (R$)
             </label>
             <div className="relative">
-              <span className="absolute left-3.5 top-2.5 text-sm font-semibold text-slate-500">R$</span>
+              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-gray-400">R$</span>
               <input
                 type="number"
                 id="valor_gasto"
@@ -179,33 +171,33 @@ export default function ModalPreenchimentoVisita({
                 placeholder="0,00"
                 value={localVisita.valor_gasto || ''}
                 onChange={(e) => handleFieldChange('valor_gasto', parseFloat(e.target.value) || 0)}
-                className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg pl-10 pr-4 py-2.5 text-slate-200 outline-none transition-all text-sm font-medium"
+                className="w-full bg-gray-50 border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 rounded-xl pl-10 pr-4 py-2.5 text-gray-800 outline-none transition-all text-sm font-semibold"
               />
             </div>
           </div>
 
           {/* Observações */}
           <div className="space-y-2">
-            <label htmlFor="observacoes" className="text-xs font-semibold uppercase tracking-wider text-slate-400">
+            <label htmlFor="observacoes" className="text-xs font-bold uppercase tracking-wider text-gray-500">
               Observações de Campo / Relato Técnico
             </label>
             <textarea
               id="observacoes"
               rows={4}
-              placeholder="Relato detalhado da execução da visita, ocorrências ou pendências..."
+              placeholder="Relato detalhado da execução, ocorrências ou pendências..."
               value={localVisita.observacoes || ''}
               onChange={(e) => handleFieldChange('observacoes', e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-4 py-3 text-slate-200 placeholder-slate-650 outline-none transition-all text-sm resize-none"
+              className="w-full bg-gray-50 border border-gray-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 rounded-xl px-4 py-3 text-gray-800 placeholder-gray-400 outline-none transition-all text-sm resize-none"
             />
           </div>
         </div>
 
-        {/* Footer Modal */}
-        <div className="p-6 border-t border-slate-800 flex justify-end gap-3 bg-slate-900/50">
+        {/* Footer */}
+        <div className="p-5 border-t border-gray-100 flex justify-end gap-3 bg-gray-50">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2.5 bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-400 hover:text-slate-250 rounded-lg font-semibold text-sm transition-all cursor-pointer"
+            className="px-4 py-2.5 bg-white border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-800 rounded-xl font-semibold text-sm transition-all cursor-pointer"
           >
             Cancelar
           </button>
@@ -213,7 +205,7 @@ export default function ModalPreenchimentoVisita({
             type="button"
             onClick={handleSave}
             disabled={isSaving}
-            className="px-5 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 disabled:opacity-50 text-white rounded-lg font-bold text-sm transition-all shadow-lg shadow-orange-500/10 cursor-pointer flex items-center gap-2"
+            className="px-5 py-2.5 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white rounded-xl font-black text-sm transition-all shadow-md shadow-orange-500/20 cursor-pointer flex items-center gap-2"
           >
             {isSaving ? (
               <>
@@ -224,7 +216,12 @@ export default function ModalPreenchimentoVisita({
                 Salvando...
               </>
             ) : (
-              'Salvar Relatório'
+              <>
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                </svg>
+                Salvar Relatório
+              </>
             )}
           </button>
         </div>

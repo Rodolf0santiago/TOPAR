@@ -181,6 +181,7 @@ export default function DashboardVisitas() {
     horario: string;
     status_visita: 'Agendada';
     observacoes: string;
+    tecnico_id?: string | null;
     cliente?: string;
     endereco?: string;
   }) => {
@@ -198,6 +199,7 @@ export default function DashboardVisitas() {
         material_usado: [],
         valor_gasto: 0,
         observacoes: novaVisita.observacoes,
+        tecnico_id: novaVisita.tecnico_id || null,
         criado_em: new Date().toISOString(),
         cliente: novaVisita.cliente,
         endereco: novaVisita.endereco,
@@ -259,21 +261,21 @@ export default function DashboardVisitas() {
 
   if (isLoading && isDbConfigured) {
     return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <svg className="animate-spin h-8 w-8 text-orange-500" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
           </svg>
-          <span className="text-sm text-slate-400">Carregando cronograma...</span>
+          <span className="text-sm text-gray-400 font-medium">Carregando cronograma...</span>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10">
-      <div className="max-w-6xl mx-auto space-y-10">
+    <div className="min-h-screen bg-gray-50 text-gray-900 p-6 md:p-10">
+      <div className="max-w-6xl mx-auto space-y-8">
         {/* Componente KPIs e Cabeçalho */}
         <AgendaHeader
           totalHoje={totalHoje}
@@ -288,15 +290,17 @@ export default function DashboardVisitas() {
 
         {/* Componente Timeline por Dias (com dados filtrados) */}
         {filteredVisitas.length === 0 ? (
-          <div className="bg-slate-900/40 border border-slate-850 rounded-2xl p-12 text-center">
-            <svg className="w-10 h-10 text-slate-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <p className="text-slate-450 text-sm font-medium">Nenhuma visita atende aos filtros aplicados.</p>
+          <div className="bg-white border border-gray-100 rounded-2xl p-14 text-center shadow-sm">
+            <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+            <p className="text-gray-400 text-sm font-medium">Nenhuma visita atende aos filtros aplicados.</p>
             {searchTerm && (
               <button
                 onClick={() => setSearchTerm('')}
-                className="mt-3 text-xs text-orange-450 hover:underline font-bold"
+                className="mt-3 text-xs text-orange-500 hover:text-orange-600 hover:underline font-bold"
               >
                 Limpar busca
               </button>

@@ -43,6 +43,41 @@ function formatDate(dateStr: string) {
   return `${parts[2]}/${parts[1]}`;
 }
 
+// ─── KPI Card ─────────────────────────────────────────────────────────────────
+
+function KpiCard({
+  label,
+  value,
+  badge,
+  iconBg,
+  icon,
+  pulse,
+}: {
+  label: string;
+  value: React.ReactNode;
+  badge?: React.ReactNode;
+  iconBg: string;
+  icon: React.ReactNode;
+  pulse?: boolean;
+}) {
+  return (
+    <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all duration-300 relative overflow-hidden group">
+      <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50/50 pointer-events-none" />
+      <div className="flex items-start justify-between mb-4">
+        <div className={`p-2.5 rounded-xl ${iconBg}`}>
+          {icon}
+        </div>
+        {badge}
+        {pulse && <span className="w-2.5 h-2.5 rounded-full bg-orange-400 animate-ping" />}
+      </div>
+      <div>
+        <div className="text-2xl font-black text-gray-900">{value}</div>
+        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mt-1">{label}</p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function DashboardHome() {
@@ -54,7 +89,6 @@ export default function DashboardHome() {
   const projects = dbProjects.length > 0 ? dbProjects : MOCK_PROJECTS;
   const visitas = dbVisitas.length > 0 ? dbVisitas : MOCK_VISITAS;
 
-  // KPIs
   const hojeStr = '2026-06-18';
   const totalLeads = leads.length;
   const leadsNovos = leads.filter((l) => l.status === 'Novo').length;
@@ -67,143 +101,126 @@ export default function DashboardHome() {
     ? Math.round((visitas.filter((v) => v.status_visita === 'Realizada').length / visitas.length) * 100)
     : 0;
 
-  // Próximas visitas ordenadas por data/horário
   const proximasVisitas = [...visitas]
     .sort((a, b) => `${a.data_visita}${a.horario}`.localeCompare(`${b.data_visita}${b.horario}`))
     .slice(0, 5);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 p-6 md:p-10">
-      <div className="max-w-6xl mx-auto space-y-10">
+    <div className="min-h-screen bg-gray-50 text-gray-900 p-6 md:p-10">
+      <div className="max-w-6xl mx-auto space-y-8">
 
         {/* ── Header ─────────────────────────────────────────────── */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <span className="text-[10px] font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-2.5 py-1 rounded-full uppercase tracking-wider">
+            <span className="text-[10px] font-bold text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-full uppercase tracking-wider">
               Visão Geral
             </span>
-            <h1 className="text-3xl font-extrabold tracking-tight mt-2 text-slate-100">
+            <h1 className="text-3xl font-black tracking-tight mt-2 text-gray-900">
               Central OKKA
             </h1>
-            <p className="text-xs text-slate-400 mt-1">
-              Resumo operacional de piso radiante — {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}.
+            <p className="text-sm text-gray-500 mt-1">
+              Resumo operacional — {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}.
             </p>
           </div>
-          <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 rounded-xl">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-xs font-semibold text-emerald-400">Sistema Ativo</span>
+          <div className="flex items-center gap-2 bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-xl">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-xs font-bold text-emerald-700">Sistema Ativo</span>
           </div>
         </div>
 
         {/* ── KPI Grid ───────────────────────────────────────────── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Leads */}
-          <div className="bg-slate-900/60 backdrop-blur border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden group hover:border-blue-500/30 transition-all duration-300">
-            <div className="absolute right-0 top-0 w-20 h-20 bg-blue-500/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="flex items-start justify-between">
-              <div className="p-2 bg-blue-500/10 text-blue-400 rounded-xl">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </div>
-              {leadsNovos > 0 && (
-                <span className="text-[9px] font-bold bg-blue-500/20 text-blue-300 border border-blue-500/20 px-1.5 py-0.5 rounded-full">
-                  +{leadsNovos} novos
-                </span>
-              )}
-            </div>
-            <h3 className="text-3xl font-extrabold text-slate-100 mt-3">{totalLeads}</h3>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Total de Leads</p>
-          </div>
-
-          {/* Projetos em Andamento */}
-          <div className="bg-slate-900/60 backdrop-blur border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden group hover:border-orange-500/30 transition-all duration-300">
-            <div className="absolute right-0 top-0 w-20 h-20 bg-orange-500/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="p-2 bg-orange-500/10 text-orange-400 rounded-xl w-fit">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <KpiCard
+            label="Total de Leads"
+            value={totalLeads}
+            iconBg="bg-blue-50 text-blue-500"
+            badge={leadsNovos > 0 ? (
+              <span className="text-[9px] font-bold bg-blue-100 text-blue-600 border border-blue-200 px-2 py-0.5 rounded-full">
+                +{leadsNovos} novos
+              </span>
+            ) : undefined}
+            icon={
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            }
+          />
+          <KpiCard
+            label="Obras em Andamento"
+            value={emAndamento}
+            iconBg="bg-orange-50 text-orange-500"
+            icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
-            </div>
-            <h3 className="text-3xl font-extrabold text-slate-100 mt-3">{emAndamento}</h3>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Obras em Andamento</p>
-          </div>
-
-          {/* Faturamento */}
-          <div className="bg-slate-900/60 backdrop-blur border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden group hover:border-amber-500/30 transition-all duration-300">
-            <div className="absolute right-0 top-0 w-20 h-20 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="p-2 bg-amber-500/10 text-amber-400 rounded-xl w-fit">
+            }
+          />
+          <KpiCard
+            label="Faturamento Total"
+            value={<span className="text-xl">{formatCurrency(faturamento)}</span>}
+            iconBg="bg-amber-50 text-amber-500"
+            icon={
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
-            </div>
-            <h3 className="text-2xl font-extrabold text-amber-400 mt-3 leading-tight">{formatCurrency(faturamento)}</h3>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Faturamento Total</p>
-          </div>
-
-          {/* Visitas Hoje */}
-          <div className="bg-slate-900/60 backdrop-blur border border-slate-800/80 rounded-2xl p-5 relative overflow-hidden group hover:border-emerald-500/30 transition-all duration-300">
-            <div className="absolute right-0 top-0 w-20 h-20 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="flex items-start justify-between">
-              <div className="p-2 bg-emerald-500/10 text-emerald-400 rounded-xl">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
-              {visitasHoje > 0 && (
-                <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
-              )}
-            </div>
-            <h3 className="text-3xl font-extrabold text-slate-100 mt-3">{visitasHoje}</h3>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mt-0.5">Visitas Hoje</p>
-          </div>
+            }
+          />
+          <KpiCard
+            label="Visitas Hoje"
+            value={visitasHoje}
+            iconBg="bg-emerald-50 text-emerald-500"
+            pulse={visitasHoje > 0}
+            icon={
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            }
+          />
         </div>
 
-        {/* ── Conteúdo Principal (2 colunas) ────────────────────── */}
+        {/* ── Conteúdo Principal ──────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          {/* Próximas Visitas ─────────────────────────────────── */}
-          <div className="lg:col-span-2 bg-slate-900/60 border border-slate-800/80 rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-5 border-b border-slate-800">
+          {/* Próximas Visitas */}
+          <div className="lg:col-span-2 bg-white border border-gray-100 rounded-2xl overflow-hidden shadow-sm">
+            <div className="flex items-center justify-between p-5 border-b border-gray-100">
               <div>
-                <h2 className="text-sm font-bold text-slate-100">Próximas Visitas</h2>
-                <p className="text-[10px] text-slate-500 mt-0.5">Agenda técnica dos próximos dias</p>
+                <h2 className="text-sm font-bold text-gray-900">Próximas Visitas</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Agenda técnica dos próximos dias</p>
               </div>
               <Link
                 href="/visitas"
-                className="text-[10px] font-bold text-orange-400 hover:text-orange-300 transition-colors border border-orange-500/20 bg-orange-500/5 hover:bg-orange-500/10 px-2.5 py-1 rounded-lg"
+                className="text-xs font-bold text-orange-600 hover:text-orange-700 transition-colors bg-orange-50 hover:bg-orange-100 border border-orange-200 px-3 py-1.5 rounded-lg"
               >
                 Ver Tudo →
               </Link>
             </div>
-            <div className="divide-y divide-slate-800/60">
+            <div className="divide-y divide-gray-50">
               {proximasVisitas.length === 0 ? (
-                <p className="p-6 text-sm text-slate-500 italic">Nenhuma visita agendada.</p>
+                <p className="p-6 text-sm text-gray-400 italic text-center">Nenhuma visita agendada.</p>
               ) : (
                 proximasVisitas.map((v) => {
                   const nome = v.projects?.leads?.nome || v.cliente || '—';
                   const endereco = v.projects?.endereco || v.endereco || '—';
                   const isHoje = v.data_visita === hojeStr;
                   return (
-                    <div key={v.id} className="flex items-center gap-4 p-4 hover:bg-slate-800/30 transition-colors">
-                      {/* Badge de data/hora */}
-                      <div className="shrink-0 text-center min-w-[48px]">
-                        <span className={`text-[10px] font-extrabold block rounded px-1.5 py-0.5 ${isHoje ? 'bg-orange-500/20 text-orange-400' : 'bg-slate-800 text-slate-400'}`}>
+                    <div key={v.id} className="flex items-center gap-4 p-4 hover:bg-gray-50/80 transition-colors">
+                      <div className="shrink-0 text-center min-w-[52px]">
+                        <span className={`text-[9px] font-black block rounded-lg px-2 py-1 ${isHoje ? 'bg-orange-500 text-white' : 'bg-gray-100 text-gray-500'}`}>
                           {isHoje ? 'HOJE' : formatDate(v.data_visita)}
                         </span>
-                        <span className="text-xs font-mono text-slate-300 mt-1 block">{v.horario.substring(0, 5)}</span>
+                        <span className="text-xs font-mono font-bold text-gray-600 mt-1 block">{v.horario.substring(0, 5)}</span>
                       </div>
-                      {/* Info */}
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-100 truncate">{nome}</p>
-                        <p className="text-[10px] text-slate-500 truncate">{endereco}</p>
+                        <p className="text-sm font-bold text-gray-900 truncate">{nome}</p>
+                        <p className="text-xs text-gray-400 truncate">{endereco}</p>
                       </div>
-                      {/* Status */}
-                      <span className={`shrink-0 px-2 py-0.5 rounded-full text-[9px] font-bold border ${
+                      <span className={`shrink-0 px-2.5 py-1 rounded-full text-[10px] font-bold border ${
                         v.status_visita === 'Realizada'
-                          ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
                           : v.status_visita === 'Cancelada'
-                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-                          : 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                          ? 'bg-rose-50 border-rose-200 text-rose-700'
+                          : 'bg-amber-50 border-amber-200 text-amber-700'
                       }`}>
                         {v.status_visita}
                       </span>
@@ -214,92 +231,75 @@ export default function DashboardHome() {
             </div>
           </div>
 
-          {/* Coluna Direita: Atalhos + Mini Stats ───────────────── */}
+          {/* Coluna Direita */}
           <div className="flex flex-col gap-5">
 
-            {/* Atalhos Rápidos */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5">
-              <h2 className="text-sm font-bold text-slate-100 mb-4">Acessos Rápidos</h2>
-              <div className="space-y-2.5">
-                <Link href="/leads" className="flex items-center gap-3 p-3 bg-slate-950/80 border border-slate-800 hover:border-blue-500/30 rounded-xl transition-all group">
-                  <div className="p-1.5 bg-blue-500/10 text-blue-400 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            {/* Acessos Rápidos */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+              <h2 className="text-sm font-bold text-gray-900 mb-4">Acessos Rápidos</h2>
+              <div className="space-y-2">
+                {[
+                  { href: '/leads', label: 'Gestão de Leads', sub: `${leadsNovos} novos aguardando`, iconBg: 'bg-blue-50 text-blue-500', hoverBorder: 'hover:border-blue-200' },
+                  { href: '/projetos', label: 'Kanban de Projetos', sub: `${emAndamento} obras em andamento`, iconBg: 'bg-orange-50 text-orange-500', hoverBorder: 'hover:border-orange-200' },
+                  { href: '/visitas', label: 'Visitas Técnicas', sub: `${visitasHoje} visitas hoje`, iconBg: 'bg-emerald-50 text-emerald-500', hoverBorder: 'hover:border-emerald-200' },
+                ].map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-3 p-3 border border-gray-100 ${item.hoverBorder} rounded-xl transition-all group bg-gray-50 hover:bg-white hover:shadow-sm`}
+                  >
+                    <div className={`p-1.5 rounded-lg ${item.iconBg}`}>
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-gray-800">{item.label}</p>
+                      <p className="text-[10px] text-gray-400">{item.sub}</p>
+                    </div>
+                    <svg className="w-3.5 h-3.5 text-gray-300 group-hover:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
                     </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-200">Gestão de Leads</p>
-                    <p className="text-[9px] text-slate-500">{leadsNovos} novos aguardando</p>
-                  </div>
-                  <svg className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-
-                <Link href="/projetos" className="flex items-center gap-3 p-3 bg-slate-950/80 border border-slate-800 hover:border-orange-500/30 rounded-xl transition-all group">
-                  <div className="p-1.5 bg-orange-500/10 text-orange-400 rounded-lg group-hover:bg-orange-500/20 transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-200">Kanban de Projetos</p>
-                    <p className="text-[9px] text-slate-500">{emAndamento} obras em andamento</p>
-                  </div>
-                  <svg className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
-
-                <Link href="/visitas" className="flex items-center gap-3 p-3 bg-slate-950/80 border border-slate-800 hover:border-emerald-500/30 rounded-xl transition-all group">
-                  <div className="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-xs font-bold text-slate-200">Visitas Técnicas</p>
-                    <p className="text-[9px] text-slate-500">{visitasHoje} visitas hoje</p>
-                  </div>
-                  <svg className="w-3.5 h-3.5 text-slate-600 group-hover:text-slate-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
-                  </svg>
-                </Link>
+                  </Link>
+                ))}
               </div>
             </div>
 
-            {/* Mini Stats de Eficiência */}
-            <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-5 space-y-4">
-              <h2 className="text-sm font-bold text-slate-100">Eficiência do Time</h2>
+            {/* Eficiência do Time */}
+            <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm space-y-4">
+              <h2 className="text-sm font-bold text-gray-900">Eficiência do Time</h2>
 
-              {/* Barra de progresso: Taxa de Conclusão */}
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Taxa de Conclusão</span>
-                  <span className="text-xs font-extrabold text-emerald-400">{taxaConclusao}%</span>
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Taxa de Conclusão</span>
+                  <span className="text-sm font-black text-emerald-600">{taxaConclusao}%</span>
                 </div>
-                <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-700"
                     style={{ width: `${taxaConclusao}%` }}
                   />
                 </div>
               </div>
 
-              {/* Distribuição de status dos leads */}
-              <div className="space-y-1.5">
-                <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block">Pipeline de Leads</span>
+              <div className="space-y-2">
+                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider block">Pipeline de Leads</span>
                 {(['Novo', 'Em Contato', 'Qualificado', 'Perdido'] as const).map((s) => {
                   const count = leads.filter((l) => l.status === s).length;
                   const pct = leads.length > 0 ? Math.round((count / leads.length) * 100) : 0;
-                  const colors: Record<string, string> = { Novo: 'bg-blue-500', 'Em Contato': 'bg-amber-500', Qualificado: 'bg-emerald-500', Perdido: 'bg-rose-500' };
+                  const colors: Record<string, string> = {
+                    Novo: 'bg-blue-500',
+                    'Em Contato': 'bg-amber-500',
+                    Qualificado: 'bg-emerald-500',
+                    Perdido: 'bg-rose-400',
+                  };
                   return (
                     <div key={s} className="flex items-center gap-2">
-                      <span className="text-[10px] text-slate-500 w-20 shrink-0">{s}</span>
-                      <div className="flex-1 h-1 bg-slate-800 rounded-full overflow-hidden">
+                      <span className="text-[10px] text-gray-500 w-20 shrink-0 font-medium">{s}</span>
+                      <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
                         <div className={`h-full ${colors[s]} rounded-full transition-all duration-500`} style={{ width: `${pct}%` }} />
                       </div>
-                      <span className="text-[10px] font-bold text-slate-400 w-4 text-right">{count}</span>
+                      <span className="text-[10px] font-black text-gray-600 w-4 text-right">{count}</span>
                     </div>
                   );
                 })}
