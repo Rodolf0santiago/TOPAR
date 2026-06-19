@@ -92,7 +92,7 @@ const MOCK_FALLBACK_PROJECTS: Project[] = [
 ];
 
 export default function ProjectsKanban() {
-  const { projects: dbProjects, isLoading } = useProjects();
+  const { projects: dbProjects, isLoading, updateProjectStatus } = useProjects();
   const [localProjectsFallback, setLocalProjectsFallback] = useState<Project[]>(MOCK_FALLBACK_PROJECTS);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -112,9 +112,8 @@ export default function ProjectsKanban() {
   // Função para mover o card de coluna (mudar status do projeto)
   const handleMoveProject = async (projectId: string, newStage: StageType) => {
     if (isDbConfigured) {
-      // Chamada real para atualizar no banco
-      // await projectsService.updateProjectStatus(projectId, newStage)
-      // Em produção, isso dispararia queryClient.invalidateQueries({ queryKey: ['projects'] })
+      // Persiste a mudança de estágio no Supabase
+      await updateProjectStatus({ id: projectId, status_projeto: newStage });
     } else {
       // Atualização no estado local (Mockup)
       setLocalProjectsFallback((prev) =>

@@ -44,4 +44,24 @@ export const projectsService = {
     }
     return data || [];
   },
+
+  /**
+   * Atualiza o status/estágio de um projeto no Kanban
+   */
+  async updateProjectStatus(
+    id: string,
+    status_projeto: Project['status_projeto']
+  ): Promise<Project> {
+    const { data, error } = await supabase
+      .from('projects')
+      .update({ status_projeto })
+      .eq('id', id)
+      .select('*, leads(*)')
+      .single();
+
+    if (error) {
+      throw new Error(error.message || 'Erro ao atualizar status do projeto.');
+    }
+    return data as Project;
+  },
 };

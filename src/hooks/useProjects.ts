@@ -18,11 +18,22 @@ export function useProjects() {
     },
   });
 
+  // Mutação para atualizar o status/estágio de um projeto
+  const updateProjectMutation = useMutation({
+    mutationFn: ({ id, status_projeto }: { id: string; status_projeto: import('@/types/database.types').Project['status_projeto'] }) =>
+      projectsService.updateProjectStatus(id, status_projeto),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+    },
+  });
+
   return {
     projects: projectsQuery.data || [],
     isLoading: projectsQuery.isLoading,
     error: projectsQuery.error,
     createProject: createProjectMutation.mutateAsync,
     isCreating: createProjectMutation.isPending,
+    updateProjectStatus: updateProjectMutation.mutateAsync,
+    isUpdatingProject: updateProjectMutation.isPending,
   };
 }
