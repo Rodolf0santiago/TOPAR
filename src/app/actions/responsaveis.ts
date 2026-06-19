@@ -90,3 +90,40 @@ export async function createResponsavelTecnico(
 
   return result;
 }
+
+export async function deleteResponsavelTecnico(id: string, token?: string): Promise<{ success: boolean }> {
+  if (!id) {
+    throw new Error('O ID do responsável técnico é obrigatório para a exclusão.');
+  }
+
+  const supabaseAdmin = createServerClient();
+
+  // 1. Validar se o chamador é administrador
+  if (token) {
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (authError || !user) {
+      throw new Error('Não autorizado: Sessão inválida ou expirada.');
+    }
+
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile || profile.role !== 'admin') {
+      throw new Error('Acesso negado: Apenas administradores podem excluir responsáveis técnicos.');
+    }
+  }
+
+  // 2. Deletar do auth.users (o delete cascade do PostgreSQL cuidará do registro na tabela pública)
+  const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
+
+  if (deleteError) {
+    console.error('Erro ao deletar usuário do auth.users:', deleteError);
+    throw new Error(deleteError.message || 'Falha ao excluir técnico no Supabase Auth.');
+  }
+
+  return { success: true };
+}

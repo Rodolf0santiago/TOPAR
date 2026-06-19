@@ -19,7 +19,14 @@ const AVATAR_COLORS = [
 ];
 
 export default function ResponsaveisTecnicosPage() {
-  const { responsaveis: dbResponsaveis, isLoading, createResponsavel, isCreating } = useResponsaveis();
+  const {
+    responsaveis: dbResponsaveis,
+    isLoading,
+    createResponsavel,
+    isCreating,
+    deleteResponsavel,
+    isDeleting,
+  } = useResponsaveis();
 
   const [nome, setNome] = useState('');
   const [telefone, setTelefone] = useState('');
@@ -29,6 +36,8 @@ export default function ResponsaveisTecnicosPage() {
 
   const [localFallback, setLocalFallback] = useState<ResponsavelTecnico[]>(MOCK_FALLBACK_TECNICOS);
   const isDbConfigured = dbResponsaveis.length > 0;
+  
+  // Instant Loading: renderiza os dados reais do banco se existirem, caso contrário mostra o fallback (mesmo enquanto carrega)
   const listResponsaveis = isDbConfigured ? dbResponsaveis : localFallback;
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -73,6 +82,24 @@ export default function ResponsaveisTecnicosPage() {
     }
   };
 
+  const handleDelete = async (id: string, tecnicoNome: string) => {
+    if (window.confirm(`Deseja realmente excluir o técnico ${tecnicoNome}? Esta ação é irreversível.`)) {
+      try {
+        if (isDbConfigured) {
+          await deleteResponsavel(id);
+        } else {
+          setLocalFallback((prev) => prev.filter((t) => t.id !== id));
+        }
+        setSuccessMsg('Responsável técnico excluído com sucesso!');
+        setTimeout(() => setSuccessMsg(''), 4000);
+      } catch (err: unknown) {
+        console.error('Erro ao excluir:', err);
+        setErrorMsg(err instanceof Error ? err.message : 'Falha ao excluir responsável técnico.');
+        setTimeout(() => setErrorMsg(''), 5000);
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 p-6 md:p-10 font-sans">
       <div className="max-w-6xl mx-auto space-y-7">
@@ -105,6 +132,12 @@ export default function ResponsaveisTecnicosPage() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-xs font-bold text-emerald-700">Equipe Operacional</span>
           </div>
+          {isLoading && (
+            <div className="flex items-center gap-2 bg-orange-50 border border-orange-200 px-4 py-2.5 rounded-xl">
+              <span className="w-2 h-2 rounded-full bg-orange-500 animate-spin" />
+              <span className="text-xs font-bold text-orange-700">Sincronizando com Supabase...</span>
+            </div>
+          )}
         </div>
 
         {/* Layout Grid */}
@@ -230,14 +263,7 @@ export default function ResponsaveisTecnicosPage() {
             </div>
 
             {/* Tabela de Técnicos */}
-            {isLoading ? (
-              <div className="flex justify-center items-center py-16">
-                <svg className="animate-spin h-8 w-8 text-orange-500" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
-              </div>
-            ) : filteredResponsaveis.length === 0 ? (
+            {filteredResponsaveis.length === 0 ? (
               <div className="bg-white border border-gray-100 rounded-2xl p-14 text-center shadow-sm">
                 <div className="w-12 h-12 rounded-2xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
                   <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -256,6 +282,7 @@ export default function ResponsaveisTecnicosPage() {
                         <th className="py-4 px-6">Contato</th>
                         <th className="py-4 px-6">Cadastro</th>
                         <th className="py-4 px-6">Status</th>
+                        <th className="py-4 px-6 text-right">Ações</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -267,6 +294,9 @@ export default function ResponsaveisTecnicosPage() {
                           .map((n) => n[0])
                           .join('')
                           .toUpperCase();
+                        
+                        const isLocalUser = tecnico.id.startsWith('local-');
+
                         return (
                           <tr key={tecnico.id} className="hover:bg-gray-50/50 transition-colors group">
                             <td className="py-4 px-6">
@@ -292,7 +322,7 @@ export default function ResponsaveisTecnicosPage() {
                                   </svg>
                                   {tecnico.telefone}
                                 </p>
-                                <p className="text-xs text-gray-400 font-medium truncate flex items-center gap-1.5 animate-fade-in" title={tecnico.email}>
+                                <p className="text-xs text-gray-400 font-medium truncate flex items-center gap-1.5" title={tecnico.email}>
                                   <svg className="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                   </svg>
@@ -310,6 +340,18 @@ export default function ResponsaveisTecnicosPage() {
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 Ativo
                               </span>
+                            </td>
+                            <td className="py-4 px-6 text-right">
+                              <button
+                                onClick={() => handleDelete(tecnico.id, tecnico.nome)}
+                                disabled={isDeleting}
+                                title="Excluir Técnico"
+                                className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all cursor-pointer inline-flex items-center justify-center disabled:opacity-40"
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
                             </td>
                           </tr>
                         );

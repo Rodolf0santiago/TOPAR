@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { responsaveisService } from '@/services/responsaveisService';
-import { createResponsavelTecnico } from '@/app/actions/responsaveis';
+import { createResponsavelTecnico, deleteResponsavelTecnico } from '@/app/actions/responsaveis';
 import { supabase } from '@/lib/supabase';
 
 export function useResponsaveis() {
@@ -26,11 +26,26 @@ export function useResponsaveis() {
     },
   });
 
+  // Mutação para deletar um responsável técnico chamando a Server Action
+  const deleteResponsavelMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      return deleteResponsavelTecnico(id, token);
+    },
+    onSuccess: () => {
+      // Revalida o cache e atualiza a listagem na UI automaticamente
+      queryClient.invalidateQueries({ queryKey: ['responsaveis_tecnicos'] });
+    },
+  });
+
   return {
     responsaveis: responsaveisQuery.data || [],
     isLoading: responsaveisQuery.isLoading,
     error: responsaveisQuery.error,
     createResponsavel: createResponsavelMutation.mutateAsync,
     isCreating: createResponsavelMutation.isPending,
+    deleteResponsavel: deleteResponsavelMutation.mutateAsync,
+    isDeleting: deleteResponsavelMutation.isPending,
   };
 }
