@@ -92,39 +92,55 @@ export async function createResponsavelTecnico(
   return result;
 }
 
-export async function deleteResponsavelTecnico(id: string, token?: string): Promise<{ success: boolean }> {
-  if (!id) {
-    throw new Error('O ID do responsável técnico é obrigatório para a exclusão.');
-  }
-
-  const supabaseAdmin = createServerClient();
-
-  // 1. Validar se o chamador é administrador
-  if (token) {
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (authError || !user) {
-      throw new Error('Não autorizado: Sessão inválida ou expirada.');
+export async function deleteResponsavelTecnico(
+  id: string,
+  token?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!id) {
+      return { success: false, error: 'O ID do responsável técnico é obrigatório para a exclusão.' };
     }
 
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('perfis_usuarios')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'mestre')) {
-      throw new Error('Acesso negado: Apenas administradores podem excluir responsáveis técnicos.');
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return {
+        success: false,
+        error: 'Chave SUPABASE_SERVICE_ROLE_KEY ausente nas variáveis de ambiente. Defina-a em seu arquivo .env para permitir a exclusão de usuários.'
+      };
     }
+
+    const supabaseAdmin = createServerClient();
+
+    // 1. Validar se o chamador é administrador
+    if (token) {
+      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+      
+      if (authError || !user) {
+        return { success: false, error: 'Não autorizado: Sessão inválida ou expirada.' };
+      }
+
+      // Verificar se a role é 'admin' ou 'mestre' na tabela perfis_usuarios
+      const { data: profile, error: profileError } = await supabaseAdmin
+        .from('perfis_usuarios')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'mestre')) {
+        return { success: false, error: 'Acesso negado: Apenas administradores podem excluir colaboradores.' };
+      }
+    }
+
+    // 2. Deletar do auth.users (o delete cascade do PostgreSQL cuidará do registro na tabela pública)
+    const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
+
+    if (deleteError) {
+      console.error('Erro ao deletar usuário do auth.users:', deleteError);
+      return { success: false, error: deleteError.message || 'Falha ao excluir técnico no Supabase Auth.' };
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Erro na action deleteResponsavelTecnico:', err);
+    return { success: false, error: err.message || 'Erro inesperado ao excluir o usuário.' };
   }
-
-  // 2. Deletar do auth.users (o delete cascade do PostgreSQL cuidará do registro na tabela pública)
-  const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(id);
-
-  if (deleteError) {
-    console.error('Erro ao deletar usuário do auth.users:', deleteError);
-    throw new Error(deleteError.message || 'Falha ao excluir técnico no Supabase Auth.');
-  }
-
-  return { success: true };
 }
