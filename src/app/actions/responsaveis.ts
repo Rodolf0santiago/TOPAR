@@ -26,14 +26,14 @@ export async function createResponsavelTecnico(
       throw new Error('Não autorizado: Sessão inválida ou expirada.');
     }
 
-    // Verificar se a role é 'admin' na tabela perfis_usuarios
+    // Verificar se a role é 'admin' ou 'mestre' na tabela perfis_usuarios
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('perfis_usuarios')
       .select('role')
       .eq('id', user.id)
       .single();
 
-    if (profileError || !profile || profile.role !== 'admin') {
+    if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'mestre')) {
       throw new Error('Acesso negado: Apenas administradores podem cadastrar responsáveis técnicos.');
     }
   }
@@ -112,7 +112,7 @@ export async function deleteResponsavelTecnico(id: string, token?: string): Prom
       .eq('id', user.id)
       .single();
 
-    if (profileError || !profile || profile.role !== 'admin') {
+    if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'mestre')) {
       throw new Error('Acesso negado: Apenas administradores podem excluir responsáveis técnicos.');
     }
   }

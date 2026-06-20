@@ -1,7 +1,7 @@
 export interface Profile {
   id: string;
   name: string;
-  role: 'admin' | 'tecnico';
+  role: 'admin' | 'tecnico' | 'mestre' | 'vendedor';
   created_at: string;
 }
 
@@ -55,7 +55,7 @@ export interface PerfilUsuario {
   id: string;
   nome_completo: string;
   email: string;
-  role: 'admin' | 'instalador' | 'tecnico';
+  role: 'admin' | 'instalador' | 'tecnico' | 'mestre' | 'vendedor';
   status_acesso: boolean;
   created_at: string;
 }

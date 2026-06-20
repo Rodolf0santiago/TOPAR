@@ -66,7 +66,7 @@ export default function UsuariosPage() {
     }
   };
 
-  const handleUpdateRole = async (id: string, newRole: 'admin' | 'instalador' | 'tecnico') => {
+  const handleUpdateRole = async (id: string, newRole: 'admin' | 'instalador' | 'tecnico' | 'mestre' | 'vendedor') => {
     if (id === currentAdminId) {
       showToast('error', 'Você não pode alterar o seu próprio nível de permissão.');
       return;
@@ -102,8 +102,8 @@ export default function UsuariosPage() {
   // Estatísticas calculadas dinamicamente
   const stats = {
     total: usuarios.length,
-    admins: usuarios.filter((u) => u.role === 'admin').length,
-    tecnicos: usuarios.filter((u) => u.role === 'tecnico' || u.role === 'instalador').length,
+    admins: usuarios.filter((u) => u.role === 'admin' || u.role === 'mestre').length,
+    tecnicos: usuarios.filter((u) => u.role === 'tecnico' || u.role === 'instalador' || u.role === 'vendedor').length,
     bloqueados: usuarios.filter((u) => !u.status_acesso).length,
   };
 
@@ -254,7 +254,7 @@ export default function UsuariosPage() {
                       <td className="py-4.5 px-6">
                         <div className="flex items-center gap-3">
                           <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-sm font-black shadow-sm text-white bg-gradient-to-br ${
-                            u.role === 'admin' 
+                            u.role === 'admin' || u.role === 'mestre'
                               ? 'from-orange-500 to-amber-600 shadow-orange-500/10' 
                               : u.role === 'instalador'
                               ? 'from-emerald-500 to-teal-600 shadow-emerald-500/10'
@@ -294,6 +294,8 @@ export default function UsuariosPage() {
                           className="bg-gray-50 border border-gray-200 text-gray-800 text-xs font-bold rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 block w-full p-2.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all cursor-pointer"
                         >
                           <option value="admin">Conta Mestra (Admin)</option>
+                          <option value="mestre">Mestre (Gerente)</option>
+                          <option value="vendedor">Vendedor (Vendas)</option>
                           <option value="instalador">Instalador (Operacional)</option>
                           <option value="tecnico">Técnico (Total)</option>
                         </select>

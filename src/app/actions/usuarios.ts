@@ -28,7 +28,7 @@ async function checkAdminPermission(supabaseAdmin: ReturnType<typeof createServe
     throw new Error('Erro ao validar permissões do usuário.');
   }
 
-  if (profile.role !== 'admin') {
+  if (profile.role !== 'admin' && profile.role !== 'mestre') {
     throw new Error('Acesso negado: Permissão restrita a administradores.');
   }
 
@@ -65,7 +65,7 @@ export async function getPerfisUsuarios(): Promise<PerfilUsuario[]> {
 export async function updatePerfilUsuario(
   targetUserId: string,
   updates: {
-    role?: 'admin' | 'instalador' | 'tecnico';
+    role?: 'admin' | 'instalador' | 'tecnico' | 'mestre' | 'vendedor';
     status_acesso?: boolean;
   }
 ): Promise<PerfilUsuario> {
