@@ -99,7 +99,7 @@ export default function ResponsaveisTecnicosPage() {
 
   // Feedbacks
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
-  const [newCredentials, setNewCredentials] = useState<{ email: string; senha: string; nome: string } | null>(null);
+  const [newCredentials, setNewCredentials] = useState<{ email: string; senha: string; nome: string; isEdit?: boolean } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const [localFallback, setLocalFallback] = useState<Colaborador[]>(MOCK_COLABORADORES);
@@ -323,6 +323,14 @@ export default function ResponsaveisTecnicosPage() {
       }
 
       showToast('success', `Os dados de ${editNome} foram atualizados.`);
+      if (editSenha.trim()) {
+        setNewCredentials({
+          nome: editNome.trim(),
+          email: editEmail.trim(),
+          senha: editSenha.trim(),
+          isEdit: true,
+        });
+      }
       setEditingUser(null);
     } catch (err: any) {
       console.error(err);
@@ -401,7 +409,7 @@ export default function ResponsaveisTecnicosPage() {
   const handleCopyCredentials = (user: Colaborador) => {
     const loginLink = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://okka.com.br/login';
     const roleName = user.role.toUpperCase();
-    const text = `Acesso OKKA CRM (${roleName}):\nOlá ${user.nome_completo},\nSeu acesso foi configurado!\nLink: ${loginLink}\nE-mail: ${user.email}\nSenha padrão: OkkaTeam2026!`;
+    const text = `Acesso OKKA CRM (${roleName}):\nOlá ${user.nome_completo},\nSeu acesso foi configurado!\nLink: ${loginLink}\nE-mail: ${user.email}\nSenha: (Utilize a senha padrão OkkaTeam2026! ou a nova senha que foi redefinida)`;
     
     navigator.clipboard.writeText(text);
     setCopiedId(user.id);
@@ -1029,8 +1037,12 @@ export default function ResponsaveisTecnicosPage() {
             <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#E25B3C] to-amber-500" />
             
             <div className="p-6 border-b border-gray-100">
-              <h3 className="text-lg font-black text-gray-900">Acesso Criado com Sucesso!</h3>
-              <p className="text-xs text-gray-500 mt-1">Copie os dados de acesso abaixo para enviar ao colaborador.</p>
+              <h3 className="text-lg font-black text-gray-900">
+                {newCredentials.isEdit ? 'Acesso Atualizado com Sucesso!' : 'Acesso Criado com Sucesso!'}
+              </h3>
+              <p className="text-xs text-gray-500 mt-1">
+                {newCredentials.isEdit ? 'Copie a nova senha abaixo para enviar ao colaborador.' : 'Copie os dados de acesso abaixo para enviar ao colaborador.'}
+              </p>
             </div>
 
             <div className="p-6 space-y-4">
