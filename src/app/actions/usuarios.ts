@@ -462,3 +462,125 @@ export async function criarUsuarioCompleto(dados: {
     return { success: false, error: err.message || 'Erro inesperado ao criar usuário.' };
   }
 }
+
+export interface PermissoesAbas {
+  role: string;
+  dashboard: boolean;
+  leads: boolean;
+  visitas: boolean;
+  projetos: boolean;
+  equipe: boolean;
+  eficiencia: boolean;
+  updated_at?: string;
+}
+
+/**
+ * Obtém todas as permissões de abas por nível de acesso.
+ */
+export async function getPermissoesAbas(): Promise<PermissoesAbas[]> {
+  try {
+    const supabase = createServerClient();
+    
+    // Verificar se o requisitante tem permissão de administrador
+    await checkAdminPermission(supabase);
+
+    const { data, error } = await supabase
+      .from('permissoes_abas')
+      .select('*')
+      .order('role', { ascending: true });
+
+    if (error) {
+      console.error('Erro ao obter permissões de abas:', error);
+      throw new Error(error.message || 'Erro ao obter permissões de abas.');
+    }
+
+    return data as PermissoesAbas[];
+  } catch (err) {
+    console.error('Erro no getPermissoesAbas:', err);
+    throw err;
+  }
+}
+
+/**
+ * Atualiza as permissões de abas para um papel específico.
+ */
+export async function atualizarPermissoesAbas(
+  role: string,
+  abas: {
+    dashboard: boolean;
+    leads: boolean;
+    visitas: boolean;
+    projetos: boolean;
+    equipe: boolean;
+    eficiencia: boolean;
+  }
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createServerClient();
+    
+    // Verificar se o requisitante tem permissão de administrador
+    await checkAdminPermission(supabase);
+
+    const { error } = await supabase
+      .from('permissoes_abas')
+      .update({
+        dashboard: abas.dashboard,
+        leads: abas.leads,
+        visitas: abas.visitas,
+        projetos: abas.projetos,
+        equipe: abas.equipe,
+        eficiencia: abas.eficiencia,
+        updated_at: new Date().toISOString()
+      })
+      .eq('role', role);
+
+    if (error) {
+      console.error('Erro ao atualizar permissões de abas:', error);
+      return { success: false, error: error.message || 'Erro ao atualizar permissões de abas.' };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error('Erro no atualizarPermissoesAbas:', err);
+    return { success: false, error: (err as Error).message || 'Erro inesperado ao atualizar permissões.' };
+  }
+}
+
+/**
+ * Obtém as permissões de abas para o papel do usuário atual.
+ */
+export async function getMinhasPermissoesAbas(roleName: string): Promise<PermissoesAbas> {
+  const defaultPerms: PermissoesAbas = {
+    role: roleName,
+    dashboard: roleName !== 'instalador',
+    leads: roleName === 'admin' || roleName === 'mestre',
+    visitas: true,
+    projetos: roleName === 'admin' || roleName === 'mestre' || roleName === 'tecnico' || roleName === 'vendedor',
+    equipe: roleName === 'admin' || roleName === 'mestre',
+    eficiencia: roleName === 'admin' || roleName === 'mestre',
+  };
+
+  try {
+    const supabase = createServerClient();
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) {
+      return defaultPerms;
+    }
+
+    const { data, error } = await supabase
+      .from('permissoes_abas')
+      .select('*')
+      .eq('role', roleName)
+      .single();
+
+    if (error || !data) {
+      console.warn('Erro ou tabela de permissões não migrada. Usando padrão estático:', error?.message);
+      return defaultPerms;
+    }
+
+    return data as PermissoesAbas;
+  } catch (err) {
+    console.warn('Erro ao ler permissões. Usando padrão estático:', err);
+    return defaultPerms;
+  }
+}

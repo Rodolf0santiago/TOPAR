@@ -4,7 +4,10 @@ import React, { useState, useEffect } from 'react';
 import { 
   getPerfisUsuarios, 
   atualizarUsuarioCompleto, 
-  criarUsuarioCompleto 
+  criarUsuarioCompleto,
+  getPermissoesAbas,
+  atualizarPermissoesAbas,
+  type PermissoesAbas
 } from '@/app/actions/usuarios';
 import { deleteResponsavelTecnico } from '@/app/actions/responsaveis';
 import { PerfilUsuario } from '@/types/database.types';
@@ -102,6 +105,12 @@ export default function ResponsaveisTecnicosPage() {
   const [newCredentials, setNewCredentials] = useState<{ email: string; senha: string; nome: string; isEdit?: boolean } | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
+  // Controle de Permissões de Abas
+  const [isPermModalOpen, setIsPermModalOpen] = useState(false);
+  const [permsList, setPermsList] = useState<PermissoesAbas[]>([]);
+  const [loadingPerms, setLoadingPerms] = useState(false);
+  const [savingPerms, setSavingPerms] = useState(false);
+
   const [localFallback, setLocalFallback] = useState<Colaborador[]>(MOCK_COLABORADORES);
   
   const isDbConfigured = 
@@ -175,6 +184,74 @@ export default function ResponsaveisTecnicosPage() {
   useEffect(() => {
     loadData();
   }, [isDbConfigured]);
+
+  const handleOpenPermissionsModal = async () => {
+    setIsPermModalOpen(true);
+    setLoadingPerms(true);
+    try {
+      const data = await getPermissoesAbas();
+      setPermsList(data);
+    } catch (e) {
+      console.error(e);
+      showToast('error', 'Erro ao carregar permissões das abas.');
+    } finally {
+      setLoadingPerms(false);
+    }
+  };
+
+  const handleTogglePermCheckbox = (roleKey: string, field: keyof Omit<PermissoesAbas, 'role' | 'updated_at'>) => {
+    setPermsList((prev) =>
+      prev.map((p) => {
+        if (p.role === roleKey) {
+          return {
+            ...p,
+            [field]: !p[field],
+          };
+        }
+        return p;
+      })
+    );
+  };
+
+  const handleSavePermissions = async () => {
+    setSavingPerms(true);
+    try {
+      for (const p of permsList) {
+        const res = await atualizarPermissoesAbas(p.role, {
+          dashboard: p.dashboard,
+          leads: p.leads,
+          visitas: p.visitas,
+          projetos: p.projetos,
+          equipe: p.equipe,
+          eficiencia: p.eficiencia,
+        });
+        if (res && !res.success) {
+          throw new Error(res.error || `Erro ao salvar permissões para role ${p.role}`);
+        }
+      }
+      showToast('success', 'Permissões de abas salvas com sucesso!');
+      setIsPermModalOpen(false);
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (e: any) {
+      console.error(e);
+      showToast('error', e.message || 'Erro ao salvar permissões de abas.');
+    } finally {
+      setSavingPerms(false);
+    }
+  };
+
+  const getFriendlyRoleName = (r: string) => {
+    switch (r) {
+      case 'admin': return 'Administrador';
+      case 'mestre': return 'Mestre (Gerente)';
+      case 'vendedor': return 'Vendedor';
+      case 'tecnico': return 'Técnico';
+      case 'instalador': return 'Instalador';
+      default: return r;
+    }
+  };
 
   // Gerador de Senha Forte Automático
   const handleGeneratePassword = (isEdit = false) => {
@@ -508,14 +585,27 @@ export default function ResponsaveisTecnicosPage() {
       <div className="max-w-6xl mx-auto space-y-7">
 
         {/* Header */}
-        <div>
-          <span className="text-[10px] font-bold text-[#E25B3C] bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-full uppercase tracking-wider">
-            Gestão Integrada - IAM & Equipes
-          </span>
-          <h1 className="text-3xl font-black tracking-tight mt-2 text-gray-900">Equipe & Acessos</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Cadastre gerentes, vendedores e instaladores técnicos, configure permissões RLS e redefina credenciais de acesso de forma segura.
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <span className="text-[10px] font-bold text-[#E25B3C] bg-orange-50 border border-orange-200 px-2.5 py-1 rounded-full uppercase tracking-wider">
+              Gestão Integrada - IAM & Equipes
+            </span>
+            <h1 className="text-3xl font-black tracking-tight mt-2 text-gray-900">Equipe & Acessos</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Cadastre gerentes, vendedores e instaladores técnicos, configure permissões RLS e redefina credenciais de acesso de forma segura.
+            </p>
+          </div>
+          {isDbConfigured && (
+            <button
+              onClick={handleOpenPermissionsModal}
+              className="bg-white border border-gray-200 hover:border-[#E25B3C] text-gray-700 hover:text-[#E25B3C] font-black text-xs px-4.5 py-3 rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2 self-start md:self-center"
+            >
+              <svg className="w-4 h-4 text-gray-400 group-hover:text-[#E25B3C]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+              </svg>
+              Permissões de Abas
+            </button>
+          )}
         </div>
 
         {/* Stats Rápidos */}
@@ -1072,6 +1162,139 @@ export default function ResponsaveisTecnicosPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m-5 4h6m-6 4h6m-6 4h4" />
                 </svg>
                 Copiar Acesso
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Permissões de Abas */}
+      {isPermModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div onClick={() => setIsPermModalOpen(false)} className="absolute inset-0 bg-gray-900/50 backdrop-blur-xs" />
+          <div className="relative bg-white rounded-3xl w-full max-w-3xl shadow-2xl overflow-hidden border border-gray-150 transform transition-all duration-300">
+            <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-[#E25B3C] to-amber-500" />
+            
+            <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+              <div>
+                <h3 className="text-lg font-black text-gray-900">Configurar Permissões de Abas</h3>
+                <p className="text-xs text-gray-500 mt-1">Marque quais abas do menu cada nível de acesso terá direito de visualizar.</p>
+              </div>
+              <button 
+                onClick={() => setIsPermModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 cursor-pointer p-1"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 overflow-x-auto max-h-[60vh]">
+              {loadingPerms ? (
+                <div className="py-20 text-center flex flex-col items-center justify-center gap-3">
+                  <div className="w-8 h-8 border-4 border-[#E25B3C] border-t-transparent rounded-full animate-spin" />
+                  <p className="text-sm font-semibold text-gray-400">Carregando tabela de permissões...</p>
+                </div>
+              ) : (
+                <table className="w-full text-left border-collapse min-w-[600px]">
+                  <thead>
+                    <tr className="bg-gray-50 border-b border-gray-150 text-[10px] font-black uppercase tracking-widest text-gray-450">
+                      <th className="py-3 px-4">Nível de Acesso</th>
+                      <th className="py-3 px-4 text-center">Dashboard</th>
+                      <th className="py-3 px-4 text-center">Leads</th>
+                      <th className="py-3 px-4 text-center">Visitas</th>
+                      <th className="py-3 px-4 text-center">Projetos</th>
+                      <th className="py-3 px-4 text-center">Equipe</th>
+                      <th className="py-3 px-4 text-center">Eficiência</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100 text-sm font-medium text-gray-800">
+                    {permsList.map((p) => (
+                      <tr key={p.role} className="hover:bg-gray-50/50 transition-colors">
+                        <td className="py-3.5 px-4 font-bold text-gray-900">
+                          {getFriendlyRoleName(p.role)}
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={p.dashboard}
+                            onChange={() => handleTogglePermCheckbox(p.role, 'dashboard')}
+                            className="w-4 h-4 rounded-sm border-gray-300 text-orange-500 focus:ring-orange-500/20"
+                          />
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={p.leads}
+                            onChange={() => handleTogglePermCheckbox(p.role, 'leads')}
+                            className="w-4 h-4 rounded-sm border-gray-300 text-orange-500 focus:ring-orange-500/20"
+                          />
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={p.visitas}
+                            onChange={() => handleTogglePermCheckbox(p.role, 'visitas')}
+                            className="w-4 h-4 rounded-sm border-gray-300 text-orange-500 focus:ring-orange-500/20"
+                          />
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={p.projetos}
+                            onChange={() => handleTogglePermCheckbox(p.role, 'projetos')}
+                            className="w-4 h-4 rounded-sm border-gray-300 text-orange-500 focus:ring-orange-500/20"
+                          />
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={p.equipe}
+                            onChange={() => handleTogglePermCheckbox(p.role, 'equipe')}
+                            className="w-4 h-4 rounded-sm border-gray-300 text-orange-500 focus:ring-orange-500/20"
+                          />
+                        </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <input
+                            type="checkbox"
+                            checked={p.eficiencia}
+                            onChange={() => handleTogglePermCheckbox(p.role, 'eficiencia')}
+                            className="w-4 h-4 rounded-sm border-gray-300 text-orange-500 focus:ring-orange-500/20"
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            <div className="p-5 border-t border-gray-100 flex justify-end gap-2.5 bg-gray-50">
+              <button
+                type="button"
+                disabled={savingPerms}
+                onClick={() => setIsPermModalOpen(false)}
+                className="px-4 py-2 bg-white border border-gray-200 hover:border-gray-300 text-gray-600 hover:text-gray-800 rounded-xl font-bold text-xs transition-all cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                disabled={savingPerms || loadingPerms}
+                onClick={handleSavePermissions}
+                className="px-4.5 py-2 bg-[#E25B3C] hover:bg-orange-600 text-white rounded-xl font-bold text-xs transition-all shadow-md shadow-orange-500/10 cursor-pointer flex items-center gap-1.5"
+              >
+                {savingPerms ? (
+                  <>
+                    <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Salvando...
+                  </>
+                ) : (
+                  <>
+                    Salvar Permissões
+                  </>
+                )}
               </button>
             </div>
           </div>

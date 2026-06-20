@@ -1,9 +1,21 @@
-'use client';
-
 import React, { useState, useEffect } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { getMinhasPermissoesAbas, type PermissoesAbas } from '@/app/actions/usuarios';
+
+const getStaticPermissions = (roleName: string | null): PermissoesAbas => {
+  const r = roleName || 'admin';
+  return {
+    role: r,
+    dashboard: r !== 'instalador',
+    leads: r === 'admin' || r === 'mestre',
+    visitas: true,
+    projetos: r === 'admin' || r === 'mestre' || r === 'tecnico' || r === 'vendedor',
+    equipe: r === 'admin' || r === 'mestre',
+    eficiencia: r === 'admin' || r === 'mestre',
+  };
+};
 
 export default function DashboardLayout({
   children,
@@ -11,9 +23,20 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [role, setRole] = useState<'admin' | 'tecnico' | 'instalador' | 'mestre' | 'vendedor' | null>(null);
   const [userName, setUserName] = useState<string>('Usuário OKKA');
   const [userRoleLabel, setUserRoleLabel] = useState<string>('Painel Operacional');
+  const [permissions, setPermissions] = useState<PermissoesAbas>(() => getStaticPermissions(null));
+
+  const loadPermissions = async (userRole: string) => {
+    try {
+      const perms = await getMinhasPermissoesAbas(userRole);
+      setPermissions(perms);
+    } catch (e) {
+      console.error('Erro ao carregar permissões:', e);
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -44,6 +67,8 @@ export default function DashboardLayout({
         
         if (metadataRole) {
           setRole(metadataRole as any);
+          setPermissions(getStaticPermissions(metadataRole));
+          loadPermissions(metadataRole);
           setUserRoleLabel(
             metadataRole === 'admin' || metadataRole === 'mestre'
               ? 'Conta Mestra'
@@ -81,6 +106,8 @@ export default function DashboardLayout({
 
           if (userRole) {
             setRole(userRole as any);
+            setPermissions(getStaticPermissions(userRole));
+            loadPermissions(userRole);
             setUserRoleLabel(
               userRole === 'admin' || userRole === 'mestre'
                 ? 'Conta Mestra'
@@ -101,6 +128,34 @@ export default function DashboardLayout({
     };
   }, []);
 
+  // Redirecionamento de segurança para páginas não permitidas
+  useEffect(() => {
+    if (role) {
+      const activePerms = permissions;
+      const isRouteAllowed = 
+        (pathname === '/dashboard' && activePerms.dashboard) ||
+        (pathname === '/leads' && activePerms.leads) ||
+        (pathname === '/visitas' && activePerms.visitas) ||
+        (pathname === '/projetos' && activePerms.projetos) ||
+        (pathname === '/responsaveis-tecnicos' && activePerms.equipe) ||
+        (pathname === '/dashboard/eficiencia' && activePerms.eficiencia) ||
+        pathname.startsWith('/dashboard/mestre') || 
+        pathname.startsWith('/dashboard/vendedor') || 
+        pathname.startsWith('/dashboard/instalador') ||
+        pathname === '/dashboard';
+
+      if (!isRouteAllowed) {
+        let fallbackRoute = '/visitas';
+        if (activePerms.dashboard) fallbackRoute = '/dashboard';
+        else if (activePerms.visitas) fallbackRoute = '/visitas';
+        else if (activePerms.leads) fallbackRoute = '/leads';
+        else if (activePerms.projetos) fallbackRoute = '/projetos';
+        
+        router.push(fallbackRoute);
+      }
+    }
+  }, [pathname, role, permissions, router]);
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -113,20 +168,21 @@ export default function DashboardLayout({
       })
   );
 
-  const userRole = role || 'admin';
-  const isManager = userRole === 'admin' || userRole === 'mestre';
-
   const navItems = [
-    {
-      href: '/dashboard',
-      label: 'Dashboard',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
-    },
-    ...(isManager
+    ...(permissions.dashboard
+      ? [
+          {
+            href: '/dashboard',
+            label: 'Dashboard',
+            icon: (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
+    ...(permissions.leads
       ? [
           {
             href: '/leads',
@@ -139,16 +195,20 @@ export default function DashboardLayout({
           },
         ]
       : []),
-    {
-      href: '/visitas',
-      label: 'Gestão de Visitas Técnicas',
-      icon: (
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-        </svg>
-      ),
-    },
-    ...(isManager
+    ...(permissions.visitas
+      ? [
+          {
+            href: '/visitas',
+            label: 'Gestão de Visitas Técnicas',
+            icon: (
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            ),
+          },
+        ]
+      : []),
+    ...(permissions.projetos
       ? [
           {
             href: '/projetos',
@@ -159,6 +219,10 @@ export default function DashboardLayout({
               </svg>
             ),
           },
+        ]
+      : []),
+    ...(permissions.equipe
+      ? [
           {
             href: '/responsaveis-tecnicos',
             label: 'Equipe & Acessos',
@@ -168,6 +232,10 @@ export default function DashboardLayout({
               </svg>
             ),
           },
+        ]
+      : []),
+    ...(permissions.eficiencia
+      ? [
           {
             href: '/dashboard/eficiencia',
             label: 'Eficiência Técnica',
