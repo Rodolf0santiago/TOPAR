@@ -23,7 +23,14 @@ const STATUS_CONFIG: Record<string, { bg: string; text: string; border: string; 
 };
 
 export default function LeadsDashboard() {
-  const { leads: dbLeads, createLead, updateLeadStatus, isCreating: isCreatingLead } = useLeads();
+  const {
+    leads: dbLeads,
+    createLead,
+    updateLeadStatus,
+    isCreating: isCreatingLead,
+    updateLead,
+    isUpdatingLead
+  } = useLeads();
   const { createProject, isCreating: isCreatingProject } = useProjects();
 
   const [localLeadsFallback, setLocalLeadsFallback] = useState<Lead[]>(MOCK_FALLBACK_LEADS);
@@ -46,6 +53,7 @@ export default function LeadsDashboard() {
   // Novos estados para gerenciamento de CRM
   const [isAddLeadModalOpen, setIsAddLeadModalOpen] = useState(false);
   const [expandedLeadId, setExpandedLeadId] = useState<string | null>(null);
+  const [leadToEdit, setLeadToEdit] = useState<Lead | null>(null);
 
   const filteredLeads = listLeads.filter((lead) => {
     const matchesSearch =
@@ -76,6 +84,16 @@ export default function LeadsDashboard() {
     setProjectAddress('');
     setProjectValue('');
     setIsModalOpen(false);
+  };
+
+  const handleOpenEditModal = (lead: Lead) => {
+    setLeadToEdit(lead);
+    setIsAddLeadModalOpen(true);
+  };
+
+  const handleCloseAddLeadModal = () => {
+    setIsAddLeadModalOpen(false);
+    setLeadToEdit(null);
   };
 
   const handleQualifyLead = async (e: React.FormEvent) => {
@@ -117,37 +135,47 @@ export default function LeadsDashboard() {
     status: Lead['status'];
   }) => {
     try {
-      if (isDbConfigured) {
-        const newLead = await createLead(leadData);
-
-        if (leadData.status === 'Qualificado') {
-          await createProject({
-            lead_id: newLead.id,
-            endereco: leadData.endereco_obra || `${leadData.cidade} - PR, Brasil`,
-            valor_total: leadData.valor_estimado || 0,
-            status_projeto: 'Orçamento',
-          });
+      if (leadToEdit) {
+        if (isDbConfigured) {
+          await updateLead({ id: leadToEdit.id, updates: leadData });
+        } else {
+          setLocalLeadsFallback((prev) =>
+            prev.map((l) => (l.id === leadToEdit.id ? { ...l, ...leadData } : l))
+          );
         }
       } else {
-        const newId = `l-local-${Date.now()}`;
-        const newRecord: Lead = {
-          id: newId,
-          nome: leadData.nome,
-          email: leadData.email,
-          telefone: leadData.telefone,
-          cidade: leadData.cidade,
-          area_m2: leadData.area_m2,
-          status: leadData.status,
-          criado_em: new Date().toISOString(),
-          endereco_obra: leadData.endereco_obra,
-          valor_estimado: leadData.valor_estimado,
-          materiais_previstos: leadData.materiais_previstos,
-          observacoes: leadData.observacoes,
-        };
-        setLocalLeadsFallback((prev) => [newRecord, ...prev]);
+        if (isDbConfigured) {
+          const newLead = await createLead(leadData);
+
+          if (leadData.status === 'Qualificado') {
+            await createProject({
+              lead_id: newLead.id,
+              endereco: leadData.endereco_obra || `${leadData.cidade} - PR, Brasil`,
+              valor_total: leadData.valor_estimado || 0,
+              status_projeto: 'Orçamento',
+            });
+          }
+        } else {
+          const newId = `l-local-${Date.now()}`;
+          const newRecord: Lead = {
+            id: newId,
+            nome: leadData.nome,
+            email: leadData.email,
+            telefone: leadData.telefone,
+            cidade: leadData.cidade,
+            area_m2: leadData.area_m2,
+            status: leadData.status,
+            criado_em: new Date().toISOString(),
+            endereco_obra: leadData.endereco_obra,
+            valor_estimado: leadData.valor_estimado,
+            materiais_previstos: leadData.materiais_previstos,
+            observacoes: leadData.observacoes,
+          };
+          setLocalLeadsFallback((prev) => [newRecord, ...prev]);
+        }
       }
     } catch (err) {
-      console.error('Erro ao cadastrar lead no dashboard:', err);
+      console.error('Erro ao cadastrar/atualizar lead no dashboard:', err);
       throw err;
     }
   };
@@ -282,22 +310,37 @@ export default function LeadsDashboard() {
                             </span>
                           </td>
                           <td className="px-6 py-4 text-right">
-                            {lead.status !== 'Qualificado' && lead.status !== 'Perdido' ? (
+                            <div className="flex items-center justify-end gap-2">
                               <button
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  handleOpenQualifyModal(lead);
+                                  handleOpenEditModal(lead);
                                 }}
-                                className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-sm shadow-orange-500/20 transition-all cursor-pointer inline-flex items-center gap-1.5"
+                                className="p-1.5 text-gray-400 hover:text-orange-500 hover:bg-gray-100 rounded-lg transition-all cursor-pointer"
+                                title="Editar Lead"
                               >
-                                Qualificar
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                 </svg>
                               </button>
-                            ) : (
-                              <span className="text-xs text-gray-300 italic font-medium">Concluído</span>
-                            )}
+
+                              {lead.status !== 'Qualificado' && lead.status !== 'Perdido' ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleOpenQualifyModal(lead);
+                                  }}
+                                  className="bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-sm shadow-orange-500/20 transition-all cursor-pointer inline-flex items-center gap-1.5"
+                                >
+                                  Qualificar
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                  </svg>
+                                </button>
+                              ) : (
+                                <span className="text-xs text-gray-300 italic font-medium py-1">Concluído</span>
+                              )}
+                            </div>
                           </td>
                         </tr>
                         
@@ -340,11 +383,22 @@ export default function LeadsDashboard() {
 
                                 {/* Coluna 3: Materiais Previstos */}
                                 <div className="space-y-2">
-                                  <div className="flex items-center gap-1.5 font-bold text-gray-400 uppercase tracking-wider text-[9px]">
-                                    <svg className="w-4 h-4 text-orange-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                                    </svg>
-                                    Materiais Planejados
+                                  <div className="flex items-center justify-between font-bold text-gray-400 uppercase tracking-wider text-[9px]">
+                                    <div className="flex items-center gap-1.5">
+                                      <svg className="w-4 h-4 text-orange-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                      </svg>
+                                      Materiais Planejados
+                                    </div>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleOpenEditModal(lead);
+                                      }}
+                                      className="text-[9px] font-bold text-orange-650 hover:text-orange-700 bg-orange-50/80 px-2 py-0.5 rounded border border-orange-100 transition-colors flex items-center gap-1 cursor-pointer"
+                                    >
+                                      Editar
+                                    </button>
                                   </div>
                                   <div className="pl-5.5 flex flex-wrap gap-1.5">
                                     {!lead.materiais_previstos || lead.materiais_previstos.length === 0 ? (
@@ -498,9 +552,10 @@ export default function LeadsDashboard() {
       {isAddLeadModalOpen && (
         <ModalCadastroLead
           isOpen={isAddLeadModalOpen}
-          onClose={() => setIsAddLeadModalOpen(false)}
+          onClose={handleCloseAddLeadModal}
           onSave={handleSaveLead}
-          isSaving={isCreatingLead}
+          isSaving={leadToEdit ? isUpdatingLead : isCreatingLead}
+          leadToEdit={leadToEdit}
         />
       )}
     </div>

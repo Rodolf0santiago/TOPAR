@@ -26,6 +26,7 @@ interface ModalCadastroLeadProps {
     status: Lead['status'];
   }) => Promise<void>;
   isSaving: boolean;
+  leadToEdit?: Lead | null;
 }
 
 export default function ModalCadastroLead({
@@ -33,6 +34,7 @@ export default function ModalCadastroLead({
   onClose,
   onSave,
   isSaving,
+  leadToEdit,
 }: ModalCadastroLeadProps) {
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
@@ -57,6 +59,36 @@ export default function ModalCadastroLead({
   const [isActionPending, setIsActionPending] = useState(false);
 
   const [errorMessage, setErrorMessage] = useState('');
+
+  // Resetar estados baseado em leadToEdit
+  useEffect(() => {
+    if (isOpen) {
+      if (leadToEdit) {
+        setNome(leadToEdit.nome || '');
+        setEmail(leadToEdit.email || '');
+        setTelefone(leadToEdit.telefone || '');
+        setCidade(leadToEdit.cidade || 'Curitiba');
+        setAreaM2(leadToEdit.area_m2 ? String(leadToEdit.area_m2) : '');
+        setStatus(leadToEdit.status || 'Novo');
+        setEnderecoObra(leadToEdit.endereco_obra || '');
+        setValorEstimado(leadToEdit.valor_estimado ? String(leadToEdit.valor_estimado) : '');
+        setMateriaisPrevistos(leadToEdit.materiais_previstos || []);
+        setObservacoes(leadToEdit.observacoes || '');
+      } else {
+        setNome('');
+        setEmail('');
+        setTelefone('');
+        setCidade('Curitiba');
+        setAreaM2('');
+        setStatus('Novo');
+        setEnderecoObra('');
+        setValorEstimado('15000');
+        setMateriaisPrevistos([]);
+        setObservacoes('');
+      }
+      setErrorMessage('');
+    }
+  }, [isOpen, leadToEdit]);
 
   // Carregar materiais na abertura do modal
   useEffect(() => {
@@ -198,10 +230,14 @@ export default function ModalCadastroLead({
         <div className="p-6 border-b border-gray-100 flex justify-between items-start shrink-0">
           <div>
             <span className="text-[9px] font-black text-orange-600 bg-orange-50 border border-orange-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
-              Novo Registro
+              {leadToEdit ? 'Editar Registro' : 'Novo Registro'}
             </span>
-            <h3 className="text-xl font-black text-gray-900 mt-1.5">Cadastrar Novo Lead</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Preencha o perfil completo do lead, incluindo dados pessoais, obra e orçamento previsto.</p>
+            <h3 className="text-xl font-black text-gray-900 mt-1.5">{leadToEdit ? 'Editar Lead' : 'Cadastrar Novo Lead'}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">
+              {leadToEdit
+                ? 'Edite o perfil do lead, incluindo dados de contato, obra e materiais planejados.'
+                : 'Preencha o perfil completo do lead, incluindo dados pessoais, obra e orçamento previsto.'}
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -581,7 +617,7 @@ export default function ModalCadastroLead({
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
                   </svg>
-                  Confirmar Cadastro
+                  {leadToEdit ? 'Salvar Alterações' : 'Confirmar Cadastro'}
                 </>
               )}
             </button>
