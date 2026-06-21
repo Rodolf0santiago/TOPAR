@@ -26,6 +26,7 @@ interface EmpresaMetric {
     id: string;
     nome: string;
     email: string;
+    senha_temp?: string | null;
   } | null;
   metricas: {
     leads: number;
@@ -35,6 +36,11 @@ interface EmpresaMetric {
 
 export default function SuperAdminDashboard() {
   const [empresas, setEmpresas] = useState<EmpresaMetric[]>([]);
+  const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
+
+  const togglePasswordVisibility = (id: string) => {
+    setShowPasswordMap(prev => ({ ...prev, [id]: !prev[id] }));
+  };
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -273,7 +279,8 @@ export default function SuperAdminDashboard() {
         mestre: {
           id: 'u1',
           nome: 'Roberto Santiago',
-          email: 'roberto@okka.com.br'
+          email: 'roberto@okka.com.br',
+          senha_temp: 'senhaMock123'
         },
         metricas: {
           leads: 42,
@@ -293,7 +300,8 @@ export default function SuperAdminDashboard() {
         mestre: {
           id: 'u2',
           nome: 'Clara Mendes',
-          email: 'clara@sollux.com'
+          email: 'clara@sollux.com',
+          senha_temp: 'senhaMock456'
         },
         metricas: {
           leads: 28,
@@ -313,7 +321,8 @@ export default function SuperAdminDashboard() {
         mestre: {
           id: 'u3',
           nome: 'Felipe Dantas',
-          email: 'felipe@warmpiso.com'
+          email: 'felipe@warmpiso.com',
+          senha_temp: 'senhaMock789'
         },
         metricas: {
           leads: 15,
@@ -333,7 +342,8 @@ export default function SuperAdminDashboard() {
         mestre: {
           id: 'u4',
           nome: 'Mariana Lima',
-          email: 'mariana@ecoheat.com.br'
+          email: 'mariana@ecoheat.com.br',
+          senha_temp: 'senhaMock999'
         },
         metricas: {
           leads: 64,
@@ -538,6 +548,29 @@ export default function SuperAdminDashboard() {
                           <div>
                             <div className="text-slate-300 font-medium">{emp.mestre.nome}</div>
                             <div className="text-slate-500 text-[11px]">{emp.mestre.email}</div>
+                            <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-500">
+                              <span>Senha:</span>
+                              <span className="font-mono bg-slate-950 px-1.5 py-0.5 rounded text-slate-300">
+                                {showPasswordMap[emp.id] ? (emp.mestre.senha_temp || 'OkkaMestre2026!') : '••••••••'}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => togglePasswordVisibility(emp.id)}
+                                className="text-slate-500 hover:text-slate-300 p-0.5 cursor-pointer"
+                                title={showPasswordMap[emp.id] ? "Ocultar senha" : "Ver senha"}
+                              >
+                                {showPasswordMap[emp.id] ? (
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.542 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                                  </svg>
+                                ) : (
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                )}
+                              </button>
+                            </div>
                           </div>
                         ) : (
                           <span className="text-slate-600 italic">Sem responsável vinculado</span>

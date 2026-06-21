@@ -140,7 +140,8 @@ export async function criarEmpresaECliente(dados: CriarEmpresaEClienteParams) {
           email: emailFormatado,
           role: 'mestre',
           status_acesso: true,
-          empresa_id: novaEmpresa.id
+          empresa_id: novaEmpresa.id,
+          senha_temp: senhaDefinida
         });
 
       if (profileError) {
@@ -158,7 +159,8 @@ export async function criarEmpresaECliente(dados: CriarEmpresaEClienteParams) {
           nome_completo: dados.nome_mestre.trim(),
           role: 'mestre',
           empresa_id: novaEmpresa.id,
-          status_acesso: true
+          status_acesso: true,
+          senha_temp: senhaDefinida
         })
         .eq('id', novoUserId);
     }
@@ -200,6 +202,12 @@ export async function atualizarSenhaUsuario(userId: string, novaSenha: string) {
       console.error('Erro ao alterar senha do usuário:', error);
       return { success: false, error: error.message || 'Erro ao redefinir a senha do usuário.' };
     }
+
+    // Salvar nova senha limpa no perfil público para visualização pelo super admin
+    await supabaseAdmin
+      .from('perfis_usuarios')
+      .update({ senha_temp: novaSenha.trim() })
+      .eq('id', userId);
 
     return { success: true };
   } catch (err: any) {
@@ -257,7 +265,7 @@ export async function getSaaSEmpresas() {
         // Obter usuário mestre
         const { data: mestre } = await supabaseAdmin
           .from('perfis_usuarios')
-          .select('id, nome_completo, email')
+          .select('id, nome_completo, email, senha_temp')
           .eq('empresa_id', empresa.id)
           .eq('role', 'mestre')
           .limit(1)
@@ -280,7 +288,8 @@ export async function getSaaSEmpresas() {
           mestre: mestre ? {
             id: mestre.id,
             nome: mestre.nome_completo,
-            email: mestre.email
+            email: mestre.email,
+            senha_temp: mestre.senha_temp
           } : null,
           metricas: {
             leads: leadsCount || 0,
