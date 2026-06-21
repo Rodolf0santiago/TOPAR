@@ -525,41 +525,49 @@ export default function DashboardVisitas() {
                 return (
                   <div
                     key={v.id}
-                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-rose-50/40 transition-colors group"
+                    className="flex flex-col md:flex-row md:items-center gap-4 px-5 py-4 hover:bg-rose-50/40 transition-colors group"
                   >
                     {/* Badge de data/hora */}
-                    <div className="shrink-0 text-center min-w-[72px]">
-                      <div className="bg-rose-50 border border-rose-200 rounded-xl px-2.5 py-2">
+                    <div className="flex items-center justify-between md:block shrink-0 md:text-center min-w-[72px]">
+                      <div className="bg-rose-50 border border-rose-200 rounded-xl px-2.5 py-2 text-center w-full md:w-auto">
                         <p className="text-[10px] font-black text-rose-500 uppercase tracking-wider">{dataFormatada}</p>
                         <p className="text-sm font-black text-rose-700 font-mono leading-none mt-0.5">{hora}</p>
                         <p className="text-[8px] text-rose-400 font-semibold mt-0.5">hs</p>
                       </div>
+                      
+                      {/* Badge de atraso no mobile (ao lado da data) */}
+                      <span className="md:hidden text-[9px] font-black text-rose-600 bg-rose-50 border border-rose-200 px-2.5 py-1.5 rounded-full">
+                        +{diasAtraso}d
+                      </span>
                     </div>
 
                     {/* Info principal */}
-                    <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-1">
+                    <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-2 md:gap-y-1">
                       <div>
                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Cliente</p>
-                        <p className="text-sm font-black text-gray-900 truncate">{clienteNome}</p>
+                        <p className="text-sm font-black text-gray-900 break-words md:truncate">{clienteNome}</p>
                       </div>
                       <div>
                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Endereço / Obra</p>
-                        <p className="text-xs text-gray-600 truncate">{endereco}</p>
+                        <p className="text-xs text-gray-600 break-words md:truncate">{endereco}</p>
                       </div>
                       <div>
                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Técnico Responsável</p>
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-4 h-4 rounded-full bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white text-[8px] font-black shrink-0">
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm">
                             {tecnicoNome.charAt(0)}
                           </div>
-                          <p className="text-xs font-semibold text-gray-700 truncate">{tecnicoNome}</p>
+                          <span className="text-xs font-bold text-rose-700 bg-rose-50/80 border border-rose-100 px-2.5 py-0.5 rounded-md break-words md:truncate">
+                            {tecnicoNome}
+                          </span>
                         </div>
                       </div>
                     </div>
 
                     {/* Badge de atraso + ações */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-[9px] font-black text-rose-600 bg-rose-50 border border-rose-200 px-2 py-1 rounded-full">
+                    <div className="flex items-center justify-between md:justify-end gap-2 shrink-0 border-t border-rose-100/50 md:border-t-0 pt-3 md:pt-0">
+                      {/* Badge de atraso no desktop */}
+                      <span className="hidden md:inline-block text-[9px] font-black text-rose-600 bg-rose-50 border border-rose-200 px-2 py-1 rounded-full">
                         +{diasAtraso}d
                       </span>
                       {tecnicoTelefone && (

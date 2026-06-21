@@ -111,8 +111,8 @@ export default function VisitaCard({ visita, onOpenModal, showDate = false, onDe
           </h4>
 
           {endereco && (
-            <div className="flex items-center gap-2">
-              <p className="text-xs text-gray-400 leading-tight truncate">{endereco}</p>
+            <div className="flex items-start md:items-center gap-2">
+              <p className="text-xs text-gray-400 leading-relaxed break-words flex-1 md:truncate">{endereco}</p>
               <a
                 href={googleMapsUrl}
                 target="_blank"
@@ -130,12 +130,12 @@ export default function VisitaCard({ visita, onOpenModal, showDate = false, onDe
           )}
 
           {tecnicoNome && (
-            <div className="flex items-center gap-1.5">
-              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white text-[8px] font-black shrink-0">
+            <div className="flex items-center gap-1.5 mt-1">
+              <div className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm">
                 {tecnicoNome.charAt(0)}
               </div>
-              <span className="text-xs text-gray-500 font-medium">
-                <strong className="text-gray-700">{tecnicoNome}</strong>
+              <span className="text-xs font-bold text-orange-700 bg-orange-50/80 border border-orange-100 px-2 py-0.5 rounded-md break-words">
+                {tecnicoNome}
               </span>
             </div>
           )}
