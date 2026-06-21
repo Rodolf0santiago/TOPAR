@@ -153,11 +153,21 @@ export async function proxy(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Configura o interceptador do Next.js 16 para as rotas protegidas do dashboard e do superadmin
+// Configura o interceptador do Next.js 16 para as rotas protegidas do dashboard, superadmin e abas operacionais do CRM
 export const config = {
   matcher: [
     '/dashboard/:path*',
     '/superadmin/:path*',
     '/superadmin',
+    '/leads/:path*',
+    '/leads',
+    '/projetos/:path*',
+    '/projetos',
+    '/visitas/:path*',
+    '/visitas',
+    '/responsaveis-tecnicos/:path*',
+    '/responsaveis-tecnicos',
+    '/configuracoes/:path*',
+    '/configuracoes',
   ],
 };
