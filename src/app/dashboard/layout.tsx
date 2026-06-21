@@ -260,7 +260,7 @@ export default function DashboardLayout({
           },
         ]
       : []),
-    ...(role === 'mestre' || role === 'admin'
+    ...(role === 'mestre' || role === 'admin' || permissions.role === 'mestre' || permissions.role === 'admin' || permissions.equipe
       ? [
           {
             href: '/dashboard/mestre/configuracoes/assinatura',
