@@ -121,7 +121,8 @@ export default function SuperAdminDashboard() {
     try {
       const res = await criarEmpresaECliente(newCompanyForm);
       if (res.success) {
-        setSuccessMsg(`Empresa "${newCompanyForm.nome_fantasia}" cadastrada com sucesso!`);
+        const passwordBackup = newCompanyForm.password || 'OkkaMestre2026!';
+        setSuccessMsg(`Empresa "${newCompanyForm.nome_fantasia}" cadastrada com sucesso! Senha temporária do Mestre: ${passwordBackup}`);
         setIsCreateModalOpen(false);
         setNewCompanyForm({
           nome_fantasia: '',
@@ -152,7 +153,8 @@ export default function SuperAdminDashboard() {
     try {
       const res = await atualizarSenhaUsuario(selectedEmpresa.mestre.id, newPassword);
       if (res.success) {
-        setSuccessMsg(`Senha do usuário ${selectedEmpresa.mestre.email} redefinida com sucesso!`);
+        const passwordBackup = newPassword;
+        setSuccessMsg(`Senha do usuário ${selectedEmpresa.mestre.email} redefinida com sucesso! Nova senha configurada: ${passwordBackup}`);
         setIsPasswordModalOpen(false);
         setNewPassword('');
       } else {
