@@ -208,6 +208,16 @@ export async function criarNovaVisita(formData: FormData): Promise<{ success: bo
       pdfUrl = urlData.publicUrl;
     }
 
+    let currentUserName: string | null = null;
+    const cookieStore = await cookies();
+    const token = cookieStore.get('sb-access-token')?.value;
+    if (token) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) {
+        currentUserName = user.user_metadata?.name || user.user_metadata?.nome_completo || user.email || 'Usuário';
+      }
+    }
+
     // Inserção no banco
     const { data: visitaData, error: dbError } = await supabase
       .from('visits')
@@ -221,7 +231,8 @@ export async function criarNovaVisita(formData: FormData): Promise<{ success: bo
           valor_gasto: 0,
           observacoes: observacoes,
           tecnico_id: tecnicoId || null,
-          pdf_proposta_url: pdfUrl
+          pdf_proposta_url: pdfUrl,
+          agendado_por: currentUserName
         }
       ])
       .select('*, projects(*, leads(*)), responsaveis_tecnicos(*)')

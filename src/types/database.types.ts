@@ -51,6 +51,7 @@ export interface Visita {
   whatsapp_enviado?: boolean;
   whatsapp_log?: string | null;
   pdf_proposta_url?: string | null;
+  agendado_por?: string | null;
 }
 
 export interface ResponsavelTecnico {

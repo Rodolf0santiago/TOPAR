@@ -233,6 +233,7 @@ export default function DashboardVisitas() {
 
   const [copiedVisitaId, setCopiedVisitaId] = useState<string | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+  const [currentUserName, setCurrentUserName] = useState<string | null>(null);
 
   React.useEffect(() => {
     async function fetchUserRole() {
@@ -240,6 +241,8 @@ export default function DashboardVisitas() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           let userRole = session.user.user_metadata?.role;
+          const name = session.user.user_metadata?.name || session.user.user_metadata?.nome_completo || session.user.email || 'Usuário';
+          setCurrentUserName(name);
           if (!userRole) {
             // Consultar a tabela 'perfis'
             const { data: perfil } = await supabase
@@ -274,6 +277,7 @@ export default function DashboardVisitas() {
     } else {
       // Mock mestre offline
       setCurrentUserRole('mestre');
+      setCurrentUserName('Mestre Offline');
     }
   }, [isDbConfigured]);
 
@@ -553,7 +557,8 @@ export default function DashboardVisitas() {
             status_visita: 'Agendada',
             observacoes: novaVisita.observacoes,
             tecnico_id: novaVisita.tecnico_id,
-            pdf_proposta_url: pdfUrl
+            pdf_proposta_url: pdfUrl,
+            agendado_por: currentUserName
           });
 
           showToast('Novo cliente cadastrado e visita agendada!', 'success');
@@ -577,6 +582,7 @@ export default function DashboardVisitas() {
             cliente: newClientData.nome,
             endereco: fullEndereco,
             pdf_proposta_url: novaVisita.pdf_proposta ? URL.createObjectURL(novaVisita.pdf_proposta) : null,
+            agendado_por: currentUserName,
             projects: {
               id: mockProjectId,
               lead_id: mockLeadId,
@@ -620,7 +626,8 @@ export default function DashboardVisitas() {
             status_visita: 'Agendada',
             observacoes: novaVisita.observacoes,
             tecnico_id: novaVisita.tecnico_id,
-            pdf_proposta_url: pdfUrl
+            pdf_proposta_url: pdfUrl,
+            agendado_por: currentUserName
           });
           showToast('Visita agendada com sucesso!', 'success');
         } else {
@@ -640,6 +647,7 @@ export default function DashboardVisitas() {
             cliente: clienteNome,
             endereco: projectEndereco,
             pdf_proposta_url: novaVisita.pdf_proposta ? URL.createObjectURL(novaVisita.pdf_proposta) : null,
+            agendado_por: currentUserName,
             projects: {
               id: project_id,
               lead_id: selectedProj?.lead_id || 'l-mock',
@@ -883,7 +891,7 @@ export default function DashboardVisitas() {
                     </div>
 
                     {/* Info principal */}
-                    <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-3 gap-x-4 gap-y-2 md:gap-y-1">
+                    <div className="flex-1 min-w-0 grid grid-cols-1 md:grid-cols-4 gap-x-4 gap-y-2 md:gap-y-1">
                       <div>
                         <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Cliente</p>
                         <p className="text-sm font-black text-gray-900 break-words md:truncate">{clienteNome}</p>
@@ -900,6 +908,14 @@ export default function DashboardVisitas() {
                           </div>
                           <span className="text-xs font-bold text-rose-700 bg-rose-50/80 border border-rose-100 px-2.5 py-0.5 rounded-md break-words md:truncate">
                             {tecnicoNome}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Agendado por</p>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-xs font-bold text-gray-600 bg-gray-50 border border-gray-150 px-2.5 py-0.5 rounded-md break-words md:truncate">
+                            {v.agendado_por || '—'}
                           </span>
                         </div>
                       </div>

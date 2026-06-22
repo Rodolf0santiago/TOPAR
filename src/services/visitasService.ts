@@ -57,6 +57,7 @@ export const visitasService = {
     observacoes?: string;
     tecnico_id?: string | null;
     pdf_proposta_url?: string | null;
+    agendado_por?: string | null;
   }): Promise<Visita> {
     const { data, error } = await supabase
       .from('visits')
@@ -71,6 +72,7 @@ export const visitasService = {
           observacoes: visita.observacoes || '',
           tecnico_id: visita.tecnico_id || null,
           pdf_proposta_url: visita.pdf_proposta_url || null,
+          agendado_por: visita.agendado_por || null,
         },
       ])
       .select('*, projects(*, leads(*)), responsaveis_tecnicos(*)')
