@@ -50,6 +50,7 @@ export interface Visita {
   responsaveis_tecnicos?: ResponsavelTecnico | null;
   whatsapp_enviado?: boolean;
   whatsapp_log?: string | null;
+  pdf_proposta_url?: string | null;
 }
 
 export interface ResponsavelTecnico {

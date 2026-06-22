@@ -3,6 +3,7 @@
 import { createServerClient } from '@/lib/supabase';
 import { Visita } from '@/types/database.types';
 import { cookies } from 'next/headers';
+import crypto from 'crypto';
 
 export async function getGroupedVisitas() {
   const supabase = createServerClient();
@@ -131,5 +132,99 @@ export async function deleteVisitaAction(id: string): Promise<{ success: boolean
   } catch (err: any) {
     console.error('Exceção ao excluir visita:', err);
     return { success: false, error: err?.message || 'Erro inesperado ao excluir visita.' };
+  }
+}
+
+export async function criarNovaVisita(formData: FormData): Promise<{ success: boolean; data?: Visita; error?: string }> {
+  try {
+    const supabase = createServerClient();
+    
+    // Extração dos dados do FormData
+    const projectId = formData.get('project_id') as string;
+    const tecnicoId = formData.get('tecnico_id') as string | null;
+    const dataVisita = formData.get('data_visita') as string;
+    const horario = formData.get('horario') as string;
+    const observacoes = formData.get('observacoes') as string || '';
+    const pdfFile = formData.get('pdf_proposta') as File | null;
+
+    if (!projectId) {
+      return { success: false, error: 'O ID do projeto é obrigatório.' };
+    }
+    if (!dataVisita) {
+      return { success: false, error: 'A data da visita é obrigatória.' };
+    }
+    if (!horario) {
+      return { success: false, error: 'O horário da visita é obrigatório.' };
+    }
+
+    let pdfUrl: string | null = null;
+
+    // Se houver arquivo PDF
+    if (pdfFile && pdfFile.size > 0) {
+      if (!pdfFile.name.toLowerCase().endsWith('.pdf') && pdfFile.type !== 'application/pdf') {
+        return { success: false, error: 'Apenas arquivos PDF são permitidos.' };
+      }
+
+      // Upload do arquivo para o bucket documentos_crm
+      const fileBuffer = Buffer.from(await pdfFile.arrayBuffer());
+      const fileExt = 'pdf';
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('documentos_crm')
+        .upload(fileName, fileBuffer, {
+          contentType: 'application/pdf',
+          duplex: 'half'
+        });
+
+      if (uploadError) {
+        console.error('Erro ao subir PDF no Storage:', uploadError);
+        return { success: false, error: `Erro no upload da proposta: ${uploadError.message}` };
+      }
+
+      // Recuperar URL pública
+      const { data: urlData } = supabase.storage
+        .from('documentos_crm')
+        .getPublicUrl(fileName);
+
+      pdfUrl = urlData.publicUrl;
+    }
+
+    // Inserção no banco
+    const { data: visitaData, error: dbError } = await supabase
+      .from('visits')
+      .insert([
+        {
+          project_id: projectId,
+          data_visita: dataVisita,
+          horario: horario,
+          status_visita: 'Agendada',
+          material_usado: [],
+          valor_gasto: 0,
+          observacoes: observacoes,
+          tecnico_id: tecnicoId || null,
+          pdf_proposta_url: pdfUrl
+        }
+      ])
+      .select('*, projects(*, leads(*)), responsaveis_tecnicos(*)')
+      .single();
+
+    if (dbError) {
+      console.error('Erro ao salvar visita no banco:', dbError);
+      
+      // Rollback manual do arquivo de storage se a inserção no banco falhar
+      if (pdfUrl) {
+        const fileName = pdfUrl.split('/').pop();
+        if (fileName) {
+          await supabase.storage.from('documentos_crm').remove([fileName]);
+        }
+      }
+      return { success: false, error: `Erro ao salvar visita no banco: ${dbError.message}` };
+    }
+
+    return { success: true, data: visitaData as unknown as Visita };
+  } catch (err: any) {
+    console.error('Exceção ao criar nova visita:', err);
+    return { success: false, error: err?.message || 'Erro inesperado ao criar nova visita.' };
   }
 }
