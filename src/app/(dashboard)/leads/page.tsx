@@ -141,6 +141,16 @@ export default function LeadsDashboard() {
       if (leadToEdit) {
         if (isDbConfigured) {
           await updateLead({ id: leadToEdit.id, updates: leadData });
+
+          // Se o status mudou para 'Qualificado' e antes não era 'Qualificado', cria o projeto correspondente
+          if (leadData.status === 'Qualificado' && leadToEdit.status !== 'Qualificado') {
+            await createProject({
+              lead_id: leadToEdit.id,
+              endereco: leadData.endereco_obra || `${leadData.cidade} - PR, Brasil`,
+              valor_total: leadData.valor_estimado || 0,
+              status_projeto: 'Orçamento',
+            });
+          }
         } else {
           setLocalLeadsFallback((prev) =>
             prev.map((l) => (l.id === leadToEdit.id ? { ...l, ...leadData } : l))
