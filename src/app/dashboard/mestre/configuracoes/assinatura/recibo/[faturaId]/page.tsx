@@ -104,7 +104,7 @@ export default function ReciboPage({ params }: PageProps) {
           <div className="flex justify-between items-start border-b border-dashed border-gray-200 pb-6">
             <div>
               <div className="flex items-center gap-2">
-                <img src="/logo-hubly.png" alt="HUBLY PRO Logo" className="h-7 w-auto object-contain" />
+                <img src="/logo-hubly.png" alt="HUBLY PRO Logo" className="h-10 w-auto object-contain" />
               </div>
               <p className="text-[10px] text-gray-400 mt-1">Plataforma SaaS Integrada - Hubly Pro</p>
             </div>

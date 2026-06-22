@@ -99,7 +99,7 @@ export default function LoginPage() {
         {/* Cabeçalho */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <img src="/logo-hubly.png" alt="HUBLY PRO Logo" className="h-14 w-auto object-contain" />
+            <img src="/logo-hubly.png" alt="HUBLY PRO Logo" className="h-20 w-auto object-contain" />
           </div>
           <h1 className="text-2xl font-black tracking-tight text-gray-900">Central HUBLY PRO</h1>
           <p className="text-xs text-gray-500 mt-1">Painel de Identificação — CRM Hubly Pro</p>
