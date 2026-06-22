@@ -4,6 +4,7 @@ import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useProjects } from '@/hooks/useProjects';
 import { useResponsaveis } from '@/hooks/useResponsaveis';
 import { Project } from '@/types/database.types';
+import { useDropzone } from 'react-dropzone';
 import {
   getMateriaisPredefinidos,
   criarMaterialPredefinido,
@@ -22,6 +23,7 @@ interface ModalAgendamentoVisitaProps {
       status_visita: 'Agendada';
       observacoes: string;
       tecnico_id?: string | null;
+      pdf_proposta?: File | null;
     },
     newClientData?: {
       nome: string;
@@ -120,6 +122,8 @@ export default function ModalAgendamentoVisita({
   const [horario, setHorario] = useState('09:00');
   const [tecnicoId, setTecnicoId] = useState('');
   const [observacoes, setObservacoes] = useState('');
+  const [pdfProposta, setPdfProposta] = useState<File | null>(null);
+  const [pdfError, setPdfError] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
 
   const dateInputRef = useRef<HTMLInputElement>(null);
@@ -156,6 +160,27 @@ export default function ModalAgendamentoVisita({
       loadMaterials();
     }
   }, [isOpen, tab]);
+
+  // react-dropzone config
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    accept: { 'application/pdf': ['.pdf'] },
+    maxFiles: 1,
+    onDrop: (acceptedFiles, fileRejections) => {
+      setPdfError('');
+      if (fileRejections.length > 0) {
+        setPdfError('Por favor, envie apenas arquivos PDF de até 5MB.');
+        return;
+      }
+      if (acceptedFiles.length > 0) {
+        const file = acceptedFiles[0];
+        if (file.size > 5 * 1024 * 1024) {
+          setPdfError('O arquivo deve ter no máximo 5MB.');
+          return;
+        }
+        setPdfProposta(file);
+      }
+    }
+  });
 
   if (!isOpen) return null;
 
@@ -291,6 +316,7 @@ export default function ModalAgendamentoVisita({
             status_visita: 'Agendada',
             observacoes: observacoes,
             tecnico_id: tecnicoId || null,
+            pdf_proposta: pdfProposta
           },
           null,
           projectId
@@ -307,6 +333,7 @@ export default function ModalAgendamentoVisita({
             status_visita: 'Agendada',
             observacoes: observacoes,
             tecnico_id: tecnicoId || null,
+            pdf_proposta: pdfProposta
           },
           {
             nome: nomeClienteNovo.trim(),
@@ -325,6 +352,7 @@ export default function ModalAgendamentoVisita({
           undefined
         );
       }
+      setPdfProposta(null);
       onClose();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Erro ao agendar visita.';
@@ -629,7 +657,7 @@ export default function ModalAgendamentoVisita({
                     <button
                       type="button"
                       onClick={() => setIsEditingList(!isEditingList)}
-                      className="text-[10px] font-bold text-orange-650 hover:text-orange-705 bg-orange-50 hover:bg-orange-100/70 border border-orange-200/60 px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                      className="text-[10px] font-bold text-orange-655 hover:text-orange-705 bg-orange-50 hover:bg-orange-100/70 border border-orange-200/60 px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1"
                     >
                       {isEditingList ? (
                         <>
@@ -654,7 +682,7 @@ export default function ModalAgendamentoVisita({
                     /* Configuração de Materiais */
                     <div className="space-y-4">
                       <div className="p-4 bg-orange-50/50 border border-orange-100 rounded-xl space-y-2">
-                        <label className="text-[10px] font-bold text-orange-850 uppercase tracking-wide">Cadastrar Novo Material Pré-definido</label>
+                        <label className="text-[10px] font-bold text-orange-855 uppercase tracking-wide">Cadastrar Novo Material Pré-definido</label>
                         <div className="flex gap-2">
                           <input
                             type="text"
@@ -887,7 +915,7 @@ export default function ModalAgendamentoVisita({
                     onClick={() => timeInputRef.current?.showPicker?.() || timeInputRef.current?.focus()}
                   >
                     <svg className="w-4 h-4 text-gray-400 ml-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <span className="flex-1 pl-2 py-2.5 text-sm text-gray-700 font-mono font-bold select-none">
                       {horario || '09:00'}
@@ -929,6 +957,68 @@ export default function ModalAgendamentoVisita({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Campo de Anexo de Proposta Comercial em PDF */}
+              <div className="space-y-2">
+                <label className={labelClass}>Anexo da Proposta (PDF)</label>
+                <div
+                  {...getRootProps()}
+                  className={`border-2 border-dashed rounded-2xl p-5 text-center cursor-pointer transition-all duration-200 flex flex-col items-center justify-center min-h-[110px] ${
+                    isDragActive
+                      ? 'border-orange-500 bg-orange-50/20 scale-[1.01]'
+                      : 'border-gray-200 hover:border-orange-400 bg-gray-50/50 hover:bg-orange-50/5'
+                  }`}
+                >
+                  <input {...getInputProps()} />
+                  
+                  {pdfProposta ? (
+                    <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+                      <div className="w-9 h-9 rounded-lg bg-orange-100 flex items-center justify-center text-orange-500 mx-auto">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-700 truncate max-w-[240px] mx-auto">
+                          {pdfProposta.name}
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                          {(pdfProposta.size / (1024 * 1024)).toFixed(2)} MB
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setPdfProposta(null)}
+                        className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 hover:text-rose-700 rounded-lg text-[9px] font-bold transition-all cursor-pointer inline-flex items-center gap-1"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Remover
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="w-8 h-8 rounded-lg bg-gray-100 border border-gray-200/80 flex items-center justify-center text-gray-400 mx-auto">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0l-4 4m4-4v12" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-gray-700">
+                          Arraste e solte o PDF da proposta aqui
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-semibold mt-0.5">
+                          ou clique para selecionar (Limite: 5MB)
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {pdfError && (
+                  <p className="text-xs text-rose-500 font-bold">{pdfError}</p>
+                )}
               </div>
 
               {/* Observações da Visita */}

@@ -181,6 +181,20 @@ export default function VisitaCard({ visita, onOpenModal, showDate = false, onDe
       {/* Lado Direito */}
       <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end border-t border-gray-100 md:border-t-0 pt-3 md:pt-0">
         {statusBadge}
+        {visita.pdf_proposta_url && (
+          <a
+            href={visita.pdf_proposta_url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            title="Visualizar Proposta Comercial (PDF)"
+            className="p-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 border border-orange-200 hover:border-orange-300 text-orange-600 hover:text-orange-700 transition-all cursor-pointer shrink-0 inline-flex items-center justify-center"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </a>
+        )}
         {tecnicoNome && tecnicoTelefone && (
           <button
             onClick={handleWhatsAppAlert}

@@ -10,6 +10,7 @@ import ModalAgendamentoVisita from '@/components/crm/modal-agendamento-visita';
 import VisitaCard from '@/components/crm/visita-card';
 import { Visita } from '@/types/database.types';
 import { downloadCSV } from '@/lib/csvHelper';
+import { supabase } from '@/lib/supabase';
 
 // Dados simulados de fallback estruturados de forma robusta
 const MOCK_FALLBACK_VISITAS: Visita[] = [
@@ -364,6 +365,7 @@ export default function DashboardVisitas() {
       status_visita: 'Agendada';
       observacoes: string;
       tecnico_id?: string | null;
+      pdf_proposta?: File | null;
     },
     newClientData?: {
       nome: string;
@@ -382,6 +384,32 @@ export default function DashboardVisitas() {
     project_id?: string
   ) => {
     try {
+      let pdfUrl: string | null = null;
+
+      // Upload do arquivo para o Supabase Storage se online e presente
+      if (isDbConfigured && novaVisita.pdf_proposta && novaVisita.pdf_proposta.size > 0) {
+        const file = novaVisita.pdf_proposta;
+        const fileExt = file.name.split('.').pop() || 'pdf';
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`;
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('documentos_crm')
+          .upload(fileName, file, {
+            cacheControl: '3600',
+            upsert: false
+          });
+
+        if (uploadError) {
+          throw new Error(`Erro no upload da proposta: ${uploadError.message}`);
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('documentos_crm')
+          .getPublicUrl(fileName);
+
+        pdfUrl = urlData.publicUrl;
+      }
+
       if (newClientData) {
         // CADASTRO DE NOVO CLIENTE (LEAD + PROJETO + VISITA)
         const formatEndereco = (rua: string, numero: string, complemento: string, bairro: string) => {
@@ -435,7 +463,7 @@ export default function DashboardVisitas() {
             status_projeto: 'Orçamento',
           });
 
-          // 3. Agenda a Visita com o newProject.id
+          // 3. Agenda a Visita com o newProject.id e a proposta
           await createVisita({
             project_id: newProject.id,
             data_visita: novaVisita.data_visita,
@@ -443,6 +471,7 @@ export default function DashboardVisitas() {
             status_visita: 'Agendada',
             observacoes: novaVisita.observacoes,
             tecnico_id: novaVisita.tecnico_id,
+            pdf_proposta_url: pdfUrl
           });
 
           showToast('Novo cliente cadastrado e visita agendada!', 'success');
@@ -465,6 +494,7 @@ export default function DashboardVisitas() {
             criado_em: new Date().toISOString(),
             cliente: newClientData.nome,
             endereco: fullEndereco,
+            pdf_proposta_url: novaVisita.pdf_proposta ? URL.createObjectURL(novaVisita.pdf_proposta) : null,
             projects: {
               id: mockProjectId,
               lead_id: mockLeadId,
@@ -508,6 +538,7 @@ export default function DashboardVisitas() {
             status_visita: 'Agendada',
             observacoes: novaVisita.observacoes,
             tecnico_id: novaVisita.tecnico_id,
+            pdf_proposta_url: pdfUrl
           });
           showToast('Visita agendada com sucesso!', 'success');
         } else {
@@ -526,6 +557,7 @@ export default function DashboardVisitas() {
             criado_em: new Date().toISOString(),
             cliente: clienteNome,
             endereco: projectEndereco,
+            pdf_proposta_url: novaVisita.pdf_proposta ? URL.createObjectURL(novaVisita.pdf_proposta) : null,
             projects: {
               id: project_id,
               lead_id: selectedProj?.lead_id || 'l-mock',

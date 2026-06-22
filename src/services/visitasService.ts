@@ -56,6 +56,7 @@ export const visitasService = {
     status_visita?: 'Agendada' | 'Realizada' | 'Cancelada';
     observacoes?: string;
     tecnico_id?: string | null;
+    pdf_proposta_url?: string | null;
   }): Promise<Visita> {
     const { data, error } = await supabase
       .from('visits')
@@ -69,6 +70,7 @@ export const visitasService = {
           valor_gasto: 0,
           observacoes: visita.observacoes || '',
           tecnico_id: visita.tecnico_id || null,
+          pdf_proposta_url: visita.pdf_proposta_url || null,
         },
       ])
       .select('*, projects(*, leads(*)), responsaveis_tecnicos(*)')
