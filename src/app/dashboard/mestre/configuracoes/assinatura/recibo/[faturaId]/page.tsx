@@ -104,10 +104,7 @@ export default function ReciboPage({ params }: PageProps) {
           <div className="flex justify-between items-start border-b border-dashed border-gray-200 pb-6">
             <div>
               <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-gray-950 flex items-center justify-center">
-                  <span className="text-white font-black text-xs">O</span>
-                </div>
-                <span className="text-sm font-black tracking-tight text-gray-900">OKKA CRM</span>
+                <img src="/logo-hubly.png" alt="HUBLY PRO Logo" className="h-7 w-auto object-contain" />
               </div>
               <p className="text-[10px] text-gray-400 mt-1">Plataforma SaaS Integrada - Hubly Pro</p>
             </div>
@@ -122,7 +119,7 @@ export default function ReciboPage({ params }: PageProps) {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs border-b border-dashed border-gray-200 pb-6">
             <div className="space-y-1.5">
               <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Prestador do Serviço</span>
-              <span className="font-bold text-gray-900 block">OKKA Soluções Tecnológicas Ltda</span>
+              <span className="font-bold text-gray-900 block">HUBLY PRO</span>
               <span className="text-gray-500 block">CNPJ: 45.982.112/0001-08</span>
               <span className="text-gray-500 block">Curitiba - PR, Brasil</span>
             </div>

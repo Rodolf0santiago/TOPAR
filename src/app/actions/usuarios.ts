@@ -309,7 +309,7 @@ export async function criarUsuarioCompleto(dados: {
     const emailFormatado = dados.email.trim().toLowerCase();
     const nomeFormatado = dados.nome_completo.trim();
     const telefoneFormatado = dados.telefone?.trim() || '';
-    const senhaDefinida = dados.password?.trim() || 'OkkaTeam2026!';
+    const senhaDefinida = dados.password?.trim() || 'HublyTeam2026!';
     const statusAcesso = dados.status_acesso ?? true;
 
     // 3. Criar usuário no auth.users do Supabase Auth

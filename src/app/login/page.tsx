@@ -98,10 +98,10 @@ export default function LoginPage() {
         
         {/* Cabeçalho */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-gradient-to-br from-[#E25B3C] to-amber-600 shadow-lg shadow-orange-500/20 mb-4">
-            <span className="text-white font-black text-lg tracking-tight">O</span>
+          <div className="flex justify-center mb-4">
+            <img src="/logo-hubly.png" alt="HUBLY PRO Logo" className="h-14 w-auto object-contain" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-gray-900">Central OKKA</h1>
+          <h1 className="text-2xl font-black tracking-tight text-gray-900">Central HUBLY PRO</h1>
           <p className="text-xs text-gray-500 mt-1">Painel de Identificação — CRM Hubly Pro</p>
         </div>
 
@@ -122,7 +122,7 @@ export default function LoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu.email@okka.com.br"
+              placeholder="seu.email@hublypro.com.br"
               className="w-full bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-[#E25B3C] focus:ring-1 focus:ring-[#E25B3C]/30 transition-all font-semibold"
             />
           </div>

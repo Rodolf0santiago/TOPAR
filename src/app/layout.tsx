@@ -7,11 +7,11 @@ export const viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'OKKA | Piso Aquecido & Conforto Térmico de Alto Padrão',
+  title: 'HUBLY PRO | CRM & Sistema de Gestão',
   description:
     'Sistemas de calefação por piso radiante elétrico ou hidráulico de alta performance. Conforto térmico invisível, seguro e sob medida para sua residência.',
-  keywords: ['piso aquecido', 'calefação', 'conforto térmico', 'climatização residencial', 'pisos radiantes', 'OKKA'],
-  authors: [{ name: 'OKKA Climatização' }],
+  keywords: ['piso aquecido', 'calefação', 'conforto térmico', 'climatização residencial', 'pisos radiantes', 'HUBLY PRO'],
+  authors: [{ name: 'HUBLY PRO' }],
 };
 
 export default function RootLayout({

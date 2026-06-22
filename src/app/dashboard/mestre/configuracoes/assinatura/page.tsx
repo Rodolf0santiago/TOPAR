@@ -155,7 +155,7 @@ export default function AssinaturaPage() {
               <span className="w-2.5 h-7 rounded-full bg-gradient-to-b from-orange-500 to-amber-500 inline-block shrink-0" />
               Faturamento & Assinatura SaaS
             </h1>
-            <p className="text-sm text-gray-500 mt-1">Gerencie a assinatura do seu workspace e consulte o histórico de cobranças do OKKA CRM.</p>
+            <p className="text-sm text-gray-500 mt-1">Gerencie a assinatura do seu workspace e consulte o histórico de cobranças do HUBLY PRO CRM.</p>
           </div>
         </div>
 

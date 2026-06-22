@@ -39,7 +39,7 @@ export default function MestreDashboardPage() {
   // Carregar metas salvas e obter usuários reais
   useEffect(() => {
     // Carregar Metas do LocalStorage
-    const savedMetas = localStorage.getItem('okka_metas_mestre');
+    const savedMetas = localStorage.getItem('hubly_metas_mestre');
     if (savedMetas) {
       try {
         const parsed = JSON.parse(savedMetas);
@@ -79,7 +79,7 @@ export default function MestreDashboardPage() {
     };
 
     setMetas(newMetas);
-    localStorage.setItem('okka_metas_mestre', JSON.stringify(newMetas));
+    localStorage.setItem('hubly_metas_mestre', JSON.stringify(newMetas));
     setShowGoalsModal(false);
     showToastMsg('Metas estratégicas atualizadas com sucesso!');
   };

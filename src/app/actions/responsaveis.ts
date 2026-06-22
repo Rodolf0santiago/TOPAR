@@ -40,7 +40,7 @@ export async function createResponsavelTecnico(
   }
 
   // 3. Criar o usuário no auth.users usando a API de Admin
-  const senhaDefinida = data.senha && data.senha.trim() ? data.senha.trim() : 'OkkaTeam2026!';
+  const senhaDefinida = data.senha && data.senha.trim() ? data.senha.trim() : 'HublyTeam2026!';
   
   const { data: authUser, error: createUserError } = await supabaseAdmin.auth.admin.createUser({
     email: data.email.trim(),

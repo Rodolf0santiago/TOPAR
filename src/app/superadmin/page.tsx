@@ -141,7 +141,7 @@ export default function SuperAdminDashboard() {
     try {
       const res = await criarEmpresaECliente(newCompanyForm);
       if (res.success) {
-        const passwordBackup = newCompanyForm.password || 'OkkaMestre2026!';
+        const passwordBackup = newCompanyForm.password || 'HublyMestre2026!';
         setSuccessMsg(`Empresa "${newCompanyForm.nome_fantasia}" cadastrada com sucesso! Senha temporária do Mestre: ${passwordBackup}`);
         setIsCreateModalOpen(false);
         setNewCompanyForm({
@@ -268,7 +268,7 @@ export default function SuperAdminDashboard() {
     return [
       {
         id: '1',
-        nome_fantasia: 'Okka Construtora & Calefação',
+        nome_fantasia: 'Hubly Construtora & Calefação',
         cnpj: '12.345.678/0001-90',
         status_assinatura: 'ativa',
         assinatura_mp_id: 'sub_mp_123456',
@@ -279,7 +279,7 @@ export default function SuperAdminDashboard() {
         mestre: {
           id: 'u1',
           nome: 'Roberto Santiago',
-          email: 'roberto@okka.com.br',
+          email: 'roberto@hublypro.com.br',
           senha_temp: 'senhaMock123'
         },
         metricas: {
@@ -551,7 +551,7 @@ export default function SuperAdminDashboard() {
                             <div className="flex items-center gap-1.5 mt-1 text-[11px] text-slate-500">
                               <span>Senha:</span>
                               <span className="font-mono bg-slate-950 px-1.5 py-0.5 rounded text-slate-300">
-                                {showPasswordMap[emp.id] ? (emp.mestre.senha_temp || 'OkkaMestre2026!') : '••••••••'}
+                                {showPasswordMap[emp.id] ? (emp.mestre.senha_temp || 'HublyMestre2026!') : '••••••••'}
                               </span>
                               <button
                                 type="button"
@@ -784,7 +784,7 @@ export default function SuperAdminDashboard() {
                 <div className="relative">
                   <input
                     type={showCreatePassword ? "text" : "password"}
-                    placeholder="Padrão: OkkaMestre2026! (Opcional)"
+                    placeholder="Padrão: HublyMestre2026! (Opcional)"
                     value={newCompanyForm.password}
                     onChange={(e) => setNewCompanyForm({...newCompanyForm, password: e.target.value})}
                     className="w-full bg-slate-950 border border-slate-800 focus:border-violet-500 rounded-xl py-2.5 pl-4 pr-10 text-xs outline-none text-slate-200 placeholder:text-slate-650"

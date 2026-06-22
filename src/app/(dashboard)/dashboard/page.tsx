@@ -118,7 +118,7 @@ export default function DashboardHome() {
               Visão Geral
             </span>
             <h1 className="text-3xl font-black tracking-tight mt-2 text-gray-900">
-              Central OKKA
+              Central HUBLY PRO
             </h1>
             <p className="text-sm text-gray-500 mt-1">
               Resumo operacional — {new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}.

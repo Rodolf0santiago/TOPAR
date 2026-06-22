@@ -46,7 +46,7 @@ export default function AcessoRevogadoPage() {
 
         <p className="text-gray-650 text-sm leading-relaxed mb-8">
           Seu perfil de acesso foi temporariamente bloqueado ou desativado pelo administrador do CRM Hubly Pro. 
-          Entre em contato com a Conta Mestra da OKKA para restabelecer suas permissões de acesso.
+          Entre em contato com a Conta Mestra do HUBLY PRO para restabelecer suas permissões de acesso.
         </p>
 
         <div className="space-y-3">
@@ -58,7 +58,7 @@ export default function AcessoRevogadoPage() {
           </button>
           
           <p className="text-[10px] text-gray-400 font-medium">
-            Protocolo de Segurança Ativa OKKA
+            Protocolo de Segurança Ativa HUBLY PRO
           </p>
         </div>
       </div>

@@ -39,16 +39,16 @@ export default function BackupsPage() {
           setIsDbConfigured(true);
         } else {
           // Fallback para localStorage se não estiver no banco de dados
-          const localFolder = localStorage.getItem('okka_gdrive_folder_id') || '';
-          const localJson = localStorage.getItem('okka_gdrive_service_account_json') || '';
+          const localFolder = localStorage.getItem('hubly_gdrive_folder_id') || '';
+          const localJson = localStorage.getItem('hubly_gdrive_service_account_json') || '';
           setFolderId(localFolder);
           setServiceAccountJson(localJson);
           setIsDbConfigured(false);
         }
       } else {
         // Fallback completo se der erro na action (por exemplo, permissão ou banco)
-        const localFolder = localStorage.getItem('okka_gdrive_folder_id') || '';
-        const localJson = localStorage.getItem('okka_gdrive_service_account_json') || '';
+        const localFolder = localStorage.getItem('hubly_gdrive_folder_id') || '';
+        const localJson = localStorage.getItem('hubly_gdrive_service_account_json') || '';
         setFolderId(localFolder);
         setServiceAccountJson(localJson);
         setIsDbConfigured(false);
@@ -72,8 +72,8 @@ export default function BackupsPage() {
         showToast('Configurações de nuvem salvas no Banco de Dados com sucesso!', 'success');
       } else if (res.error === 'not_migrated') {
         // Fallback para localStorage se a tabela não existir
-        localStorage.setItem('okka_gdrive_folder_id', folderId);
-        localStorage.setItem('okka_gdrive_service_account_json', serviceAccountJson);
+        localStorage.setItem('hubly_gdrive_folder_id', folderId);
+        localStorage.setItem('hubly_gdrive_service_account_json', serviceAccountJson);
         setIsDbConfigured(false);
         showToast(
           'Configurações salvas localmente neste navegador! Nota: A tabela gdrive_config não foi detectada no banco de dados.',
@@ -94,8 +94,8 @@ export default function BackupsPage() {
     if (window.confirm('Deseja realmente limpar as configurações do Google Drive?')) {
       setFolderId('');
       setServiceAccountJson('');
-      localStorage.removeItem('okka_gdrive_folder_id');
-      localStorage.removeItem('okka_gdrive_service_account_json');
+      localStorage.removeItem('hubly_gdrive_folder_id');
+      localStorage.removeItem('hubly_gdrive_service_account_json');
       showToast('Configurações locais limpas. Se houver dados no banco, salve vazio para limpar lá também.', 'success');
     }
   };
@@ -521,7 +521,7 @@ export default function BackupsPage() {
                   Vá em **APIs e Serviços &gt; Credenciais**. Clique em **Criar Credenciais &gt; Conta de Serviço (Service Account)**.
                 </li>
                 <li>
-                  Copie o e-mail da conta de serviço gerada (ex: <code className="bg-white border px-1 py-0.5 rounded text-[10px]">bkp-okka@projeto.iam.gserviceaccount.com</code>).
+                  Copie o e-mail da conta de serviço gerada (ex: <code className="bg-white border px-1 py-0.5 rounded text-[10px]">bkp-hubly@projeto.iam.gserviceaccount.com</code>).
                 </li>
                 <li>
                   Acesse a conta de serviço criada, clique na aba **Chaves &gt; Adicionar Chave &gt; Criar Nova Chave &gt; JSON**. O download do arquivo será feito no seu PC.

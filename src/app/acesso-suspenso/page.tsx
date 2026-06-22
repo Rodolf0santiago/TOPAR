@@ -33,7 +33,7 @@ export default function AcessoSuspensoPage() {
         <div className="space-y-2">
           <h2 className="text-xl font-black tracking-tight text-white">Acesso Suspenso</h2>
           <p className="text-xs text-slate-400 leading-relaxed">
-            O acesso da sua empresa ao **OKKA CRM** está temporariamente suspenso devido a pendências de assinatura.
+            O acesso da sua empresa ao **HUBLY PRO CRM** está temporariamente suspenso devido a pendências de assinatura.
           </p>
           <p className="text-[11px] text-slate-500 leading-relaxed pt-1">
             Por favor, contate o administrador do seu sistema (Gestor da Conta Mestra) para regularizar a situação junto ao faturamento do SaaS.

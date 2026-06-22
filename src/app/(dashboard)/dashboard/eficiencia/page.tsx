@@ -142,7 +142,7 @@ export default function EficienciaPage() {
           <div className="p-5 border-b border-gray-100 flex items-center justify-between bg-gray-50/50">
             <div>
               <h2 className="text-sm font-bold text-gray-900">Desempenho Individual</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Ranking e métricas detalhadas dos técnicos da OKKA</p>
+              <p className="text-xs text-gray-400 mt-0.5">Ranking e métricas detalhadas dos técnicos do HUBLY PRO</p>
             </div>
           </div>
 

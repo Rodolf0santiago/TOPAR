@@ -68,7 +68,7 @@ export async function criarEmpresaECliente(dados: CriarEmpresaEClienteParams) {
 
     const emailFormatado = dados.email.trim().toLowerCase();
     const cnpjFormatado = dados.cnpj.replace(/\D/g, '');
-    const senhaDefinida = dados.password?.trim() || 'OkkaMestre2026!';
+    const senhaDefinida = dados.password?.trim() || 'HublyMestre2026!';
 
     // 1. Verificar se o CNPJ já está cadastrado
     const { data: cnpjExists } = await supabaseAdmin

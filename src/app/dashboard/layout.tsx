@@ -38,7 +38,7 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
   const [role, setRole] = useState<'admin' | 'tecnico' | 'instalador' | 'mestre' | 'vendedor' | null>(null);
-  const [userName, setUserName] = useState<string>('Usuário OKKA');
+  const [userName, setUserName] = useState<string>('Usuário HUBLY PRO');
   const [userRoleLabel, setUserRoleLabel] = useState<string>('Painel Operacional');
   const [permissions, setPermissions] = useState<PermissoesAbas>(() => getStaticPermissions(null));
 
@@ -298,13 +298,7 @@ export default function DashboardLayout({
           <div className="p-6 space-y-8">
             {/* Logo */}
             <a href={permissions.dashboard ? "/dashboard" : "/visitas"} className="flex items-center gap-2.5 group">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#E25B3C] to-amber-600 flex items-center justify-center shadow-md shadow-orange-500/30">
-                <span className="text-white font-black text-sm tracking-tight">O</span>
-              </div>
-              <div>
-                <span className="text-lg font-black tracking-tight text-gray-900">OKKA</span>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-[#E25B3C] ml-1.5 bg-orange-50 border border-orange-200 px-1.5 py-0.5 rounded-full">CRM</span>
-              </div>
+              <img src="/logo-hubly.png" alt="HUBLY PRO" className="h-10 w-auto object-contain" />
             </a>
 
             {/* Navigation */}

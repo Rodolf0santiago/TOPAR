@@ -26,8 +26,8 @@ interface Colaborador {
 const MOCK_COLABORADORES: Colaborador[] = [
   {
     id: 'local-mestre',
-    nome_completo: 'Gerente Mestre OKKA',
-    email: 'mestre@okka.com.br',
+    nome_completo: 'Gerente Mestre HUBLY PRO',
+    email: 'mestre@hublypro.com.br',
     role: 'mestre',
     status_acesso: true,
     created_at: '2026-06-01T12:00:00Z',
@@ -36,7 +36,7 @@ const MOCK_COLABORADORES: Colaborador[] = [
   {
     id: 'local-vendedor',
     nome_completo: 'Juliana Mendes',
-    email: 'juliana.vendas@okka.com.br',
+    email: 'juliana.vendas@hublypro.com.br',
     role: 'vendedor',
     status_acesso: true,
     created_at: '2026-06-10T14:30:00Z',
@@ -295,7 +295,7 @@ export default function ResponsaveisTecnicosPage() {
       return;
     }
 
-    const senhaFinal = senha.trim() || 'OkkaTeam2026!';
+    const senhaFinal = senha.trim() || 'HublyTeam2026!';
     setIsCreating(true);
 
     try {
@@ -486,9 +486,9 @@ export default function ResponsaveisTecnicosPage() {
 
   // Copiar Credenciais Individuais
   const handleCopyCredentials = (user: Colaborador) => {
-    const loginLink = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://okka.com.br/login';
+    const loginLink = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://hublypro.com.br/login';
     const roleName = user.role.toUpperCase();
-    const text = `Acesso OKKA CRM (${roleName}):\nOlá ${user.nome_completo},\nSeu acesso foi configurado!\nLink: ${loginLink}\nE-mail: ${user.email}\nSenha: OkkaTeam2026!`;
+    const text = `Acesso HUBLY PRO CRM (${roleName}):\nOlá ${user.nome_completo},\nSeu acesso foi configurado!\nLink: ${loginLink}\nE-mail: ${user.email}\nSenha: HublyTeam2026!`;
     
     navigator.clipboard.writeText(text);
     setCopiedId(user.id);
@@ -498,8 +498,8 @@ export default function ResponsaveisTecnicosPage() {
   // Copiar do modal de credenciais recém criadas
   const handleCopyNewCredentials = () => {
     if (!newCredentials) return;
-    const loginLink = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://okka.com.br/login';
-    const text = `Acesso OKKA CRM:\nOlá ${newCredentials.nome},\nSeu acesso foi configurado!\nLink: ${loginLink}\nE-mail: ${newCredentials.email}\nSenha: ${newCredentials.senha}`;
+    const loginLink = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://hublypro.com.br/login';
+    const text = `Acesso HUBLY PRO CRM:\nOlá ${newCredentials.nome},\nSeu acesso foi configurado!\nLink: ${loginLink}\nE-mail: ${newCredentials.email}\nSenha: ${newCredentials.senha}`;
     
     navigator.clipboard.writeText(text);
     showToast('success', 'Credenciais copiadas para a área de transferência!');
@@ -508,8 +508,8 @@ export default function ResponsaveisTecnicosPage() {
   // Enviar pelo WhatsApp do modal de credenciais recém criadas
   const handleWhatsAppNewCredentials = () => {
     if (!newCredentials) return;
-    const loginLink = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://okka.com.br/login';
-    const text = `Acesso OKKA CRM:\nOlá ${newCredentials.nome},\nSeu acesso foi configurado!\nLink: ${loginLink}\nE-mail: ${newCredentials.email}\nSenha: ${newCredentials.senha}`;
+    const loginLink = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://hublypro.com.br/login';
+    const text = `Acesso HUBLY PRO CRM:\nOlá ${newCredentials.nome},\nSeu acesso foi configurado!\nLink: ${loginLink}\nE-mail: ${newCredentials.email}\nSenha: ${newCredentials.senha}`;
 
     const phone = newCredentials.telefone || '';
     if (!phone) {
@@ -532,9 +532,9 @@ export default function ResponsaveisTecnicosPage() {
       showToast('error', 'Telefone do colaborador não cadastrado.');
       return;
     }
-    const loginLink = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://okka.com.br/login';
+    const loginLink = typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://hublypro.com.br/login';
     const roleName = user.role.toUpperCase();
-    const text = `Acesso OKKA CRM (${roleName}):\nOlá ${user.nome_completo},\nSeu acesso foi configurado!\nLink: ${loginLink}\nE-mail: ${user.email}\nSenha: OkkaTeam2026!`;
+    const text = `Acesso HUBLY PRO CRM (${roleName}):\nOlá ${user.nome_completo},\nSeu acesso foi configurado!\nLink: ${loginLink}\nE-mail: ${user.email}\nSenha: HublyTeam2026!`;
 
     const cleanPhone = user.telefone.replace(/\D/g, '');
     const phoneWithCountry = cleanPhone.length === 10 || cleanPhone.length === 11 
@@ -795,7 +795,7 @@ export default function ResponsaveisTecnicosPage() {
                       id="senha"
                       value={senha}
                       onChange={(e) => setSenha(e.target.value)}
-                      placeholder="Padrão: OkkaTeam2026!"
+                      placeholder="Padrão: HublyTeam2026!"
                       disabled={isCreating}
                       className="w-full bg-gray-50 border border-gray-200 focus:border-[#E25B3C] focus:ring-2 focus:ring-orange-100 rounded-xl pl-4 pr-10 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none transition-all font-semibold"
                     />
@@ -1195,7 +1195,7 @@ export default function ResponsaveisTecnicosPage() {
                 <p><strong className="text-gray-400 font-sans uppercase text-[10px] tracking-wider block">Nome do Colaborador:</strong> {newCredentials.nome}</p>
                 <p><strong className="text-gray-400 font-sans uppercase text-[10px] tracking-wider block">E-mail / Login:</strong> {newCredentials.email}</p>
                 <p><strong className="text-gray-400 font-sans uppercase text-[10px] tracking-wider block">Senha de Acesso:</strong> {newCredentials.senha}</p>
-                <p><strong className="text-gray-400 font-sans uppercase text-[10px] tracking-wider block">Link de Acesso:</strong> {typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://okka.com.br/login'}</p>
+                <p><strong className="text-gray-400 font-sans uppercase text-[10px] tracking-wider block">Link de Acesso:</strong> {typeof window !== 'undefined' ? `${window.location.origin}/login` : 'https://hublypro.com.br/login'}</p>
               </div>
               <p className="text-[10px] text-gray-450 leading-relaxed font-semibold">
                 ⚠️ Por questões de segurança, a senha é exibida apenas uma vez. Copie-a agora!

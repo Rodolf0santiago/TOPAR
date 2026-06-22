@@ -9,7 +9,7 @@ const MOCK_EQUIPE: MembroEquipe[] = [
   {
     id: 'mock-1',
     nome_completo: 'Roberto Mendonça',
-    email: 'roberto.mendonca@okka.com.br',
+    email: 'roberto.mendonca@hublypro.com.br',
     telefone: '(41) 99999-1111',
     role: 'vendedor',
     status_acesso: true,
@@ -18,7 +18,7 @@ const MOCK_EQUIPE: MembroEquipe[] = [
   {
     id: 'mock-2',
     nome_completo: 'Clarice Lispector',
-    email: 'clarice.lispector@okka.com.br',
+    email: 'clarice.lispector@hublypro.com.br',
     telefone: '(41) 99999-2222',
     role: 'instalador',
     status_acesso: true,
@@ -27,7 +27,7 @@ const MOCK_EQUIPE: MembroEquipe[] = [
   {
     id: 'mock-3',
     nome_completo: 'Julio Cortázar',
-    email: 'julio.cortazar@okka.com.br',
+    email: 'julio.cortazar@hublypro.com.br',
     telefone: '(41) 99999-3333',
     role: 'vendedor',
     status_acesso: false, // Bloqueado
@@ -492,7 +492,7 @@ export default function GestaoEquipePage() {
                       id="email_corporativo"
                       type="email"
                       required
-                      placeholder="Ex: nome.colaborador@okka.com.br"
+                      placeholder="Ex: nome.colaborador@hublypro.com.br"
                       value={emailCorporativo}
                       onChange={(e) => setEmailCorporativo(e.target.value)}
                       disabled={isSaving}

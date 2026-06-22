@@ -28,7 +28,7 @@ export default function ConfiguracoesPage() {
 
   // Estado para teste
   const [testeTelefone, setTesteTelefone] = useState('');
-  const [testeMensagem, setTesteMensagem] = useState('Olá! Esta é uma mensagem de teste enviada através da integração WhatsApp do OKKA CRM.');
+  const [testeMensagem, setTesteMensagem] = useState('Olá! Esta é uma mensagem de teste enviada através da integração WhatsApp do HUBLY PRO CRM.');
   const [isTesting, setIsTesting] = useState(false);
   
   // Estado para trigger manual
