@@ -63,12 +63,22 @@ export default function VisitaCard({
      visita.tecnico_id === 't3' ? '(41) 99999-1111' : null);
 
   const [copied, setCopied] = React.useState(false);
+  const [copiedClientText, setCopiedClientText] = React.useState(false);
+
+  const clienteTelefone = visita.projects?.leads?.telefone || (visita as any).telefone || null;
 
   const getNotificationText = () => {
     const dateParts = (visita.data_visita || '').split('-');
     const dataFormatada = dateParts.length === 3 ? dateParts.reverse().join('/') : '—';
     const horario = visita.horario ? visita.horario.substring(0, 5) : '—';
     return `Olá *${tecnicoNome || 'Técnico'}*,\n\nPassando para lembrar do seu agendamento de visita técnica:\n\n*Cliente:* ${clienteNome}\n*Data:* ${dataFormatada}\n*Horário:* ${horario} hs\n*Endereço:* ${endereco || 'Não informado'}\n${visita.observacoes ? `*Observações:* ${visita.observacoes}\n` : ''}\nBom trabalho!`;
+  };
+
+  const getClientNotificationText = () => {
+    const dateParts = (visita.data_visita || '').split('-');
+    const dataFormatada = dateParts.length === 3 ? dateParts.reverse().join('/') : '—';
+    const horario = visita.horario ? visita.horario.substring(0, 5) : '—';
+    return `Olá *${clienteNome}*,\n\nPassando para confirmar o agendamento da sua instalação/visita técnica:\n\n*Data:* ${dataFormatada}\n*Horário:* ${horario} hs\n\nSe houver qualquer dúvida, estamos à disposição!\nEquipe OKKA`;
   };
 
   const handleWhatsAppAlert = (e: React.MouseEvent) => {
@@ -97,6 +107,34 @@ export default function VisitaCard({
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       console.error('Falha ao copiar texto:', err);
+    }
+  };
+
+  const handleClientWhatsApp = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evita abrir o modal de preenchimento
+    if (!clienteTelefone) {
+      alert('Telefone do cliente não cadastrado.');
+      return;
+    }
+    const cleanPhone = clienteTelefone.replace(/\D/g, '');
+    const phoneWithCountry = cleanPhone.length === 10 || cleanPhone.length === 11 
+      ? `55${cleanPhone}` 
+      : cleanPhone;
+
+    const text = getClientNotificationText();
+    const url = `https://api.whatsapp.com/send?phone=${phoneWithCountry}&text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleClientCopyText = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Evita abrir o modal de preenchimento
+    const text = getClientNotificationText();
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedClientText(true);
+      setTimeout(() => setCopiedClientText(false), 2500);
+    } catch (err) {
+      console.error('Falha ao copiar texto do cliente:', err);
     }
   };
 
@@ -167,9 +205,45 @@ export default function VisitaCard({
 
         {/* Info */}
         <div className="flex-1 min-w-0 space-y-1.5">
-          <h4 className="font-black text-gray-900 group-hover:text-orange-600 transition-colors text-sm lg:text-base leading-tight">
-            {clienteNome}
-          </h4>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h4 className="font-black text-gray-900 group-hover:text-orange-600 transition-colors text-sm lg:text-base leading-tight">
+              {clienteNome}
+            </h4>
+            {clienteTelefone && (
+              <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                {/* Botão WhatsApp Cliente */}
+                <button
+                  onClick={handleClientWhatsApp}
+                  title="Enviar aviso ao cliente via WhatsApp"
+                  className="p-1 rounded-md bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-600 hover:text-emerald-700 transition-all flex items-center justify-center cursor-pointer shadow-sm"
+                >
+                  <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M12.004 2c-5.518 0-9.996 4.478-9.996 9.996 0 1.764.46 3.426 1.265 4.887l-1.272 4.654 4.761-1.248c1.411.769 3.012 1.207 4.71 1.207 5.517 0 9.996-4.478 9.996-9.996S17.52 2 12.004 2zm5.008 14.337c-.205.577-1.011 1.103-1.602 1.173-.4.048-.922.072-1.485-.11-3.567-1.157-5.908-4.757-6.086-4.992-.178-.235-1.442-1.92-1.442-3.66 0-1.739.905-2.595 1.226-2.946.321-.351.7-.439.932-.439.234 0 .468.002.671.012.208.01.49-.078.766.592.28.681.959 2.333 1.042 2.499.083.165.138.358.028.577-.11.22-.165.358-.33.55-.165.193-.346.43-.495.577-.165.165-.337.345-.145.676.193.33.856 1.411 1.834 2.285.836.745 1.542.977 1.872 1.143.33.165.522.138.718-.087.195-.226.837-.977 1.06-1.312.22-.335.439-.28.742-.165.303.116 1.925.909 2.256 1.074.33.165.55.247.629.385.08.138.08.799-.125 1.376z"/>
+                  </svg>
+                </button>
+                {/* Botão Copiar Texto Cliente */}
+                <button
+                  onClick={handleClientCopyText}
+                  title={copiedClientText ? "Texto Copiado!" : "Copiar texto de aviso ao cliente"}
+                  className={`p-1 rounded-md border transition-all flex items-center justify-center cursor-pointer shadow-sm ${
+                    copiedClientText
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-600'
+                      : 'bg-gray-50 hover:bg-gray-100 border-gray-200 text-gray-400 hover:text-gray-600'
+                  }`}
+                >
+                  {copiedClientText ? (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.5" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2.2" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
 
           {endereco && (
             <div className="flex items-start lg:items-center gap-2">

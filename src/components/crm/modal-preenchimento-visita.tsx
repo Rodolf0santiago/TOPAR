@@ -30,6 +30,14 @@ export default function ModalPreenchimentoVisita({
   const [localVisita, setLocalVisita] = useState<Visita>(() => ({ ...visita! }));
   const [materialInput, setMaterialInput] = useState('');
   const [sugestoesMateriais, setSugestoesMateriais] = useState<string[]>([]);
+  const [showReviewData, setShowReviewData] = useState(false);
+
+  useEffect(() => {
+    if (visita) {
+      setLocalVisita({ ...visita });
+      setShowReviewData(false);
+    }
+  }, [visita]);
 
   useEffect(() => {
     async function loadSuggestions() {
@@ -126,6 +134,103 @@ export default function ModalPreenchimentoVisita({
 
         {/* Body */}
         <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+
+          {/* Dados do Cadastro (Revisão para o Instalador) */}
+          <div className="bg-gray-50 border border-gray-150 rounded-2xl p-4 space-y-3 shadow-inner">
+            <button
+              type="button"
+              onClick={() => setShowReviewData(!showReviewData)}
+              className="flex items-center justify-between w-full text-xs font-black uppercase tracking-wider text-gray-700 hover:text-orange-600 transition-colors outline-none cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <span className="w-1.5 h-3 bg-orange-500 rounded-full" />
+                <span>Dados de Cadastro do Agendamento</span>
+              </div>
+              <svg
+                className={`w-4 h-4 text-gray-400 transition-transform duration-250 ${showReviewData ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {showReviewData && (
+              <div className="pt-3 border-t border-gray-200/60 grid grid-cols-1 gap-y-3.5 gap-x-4 text-xs animate-fadeIn">
+                {/* Endereço */}
+                <div>
+                  <p className="font-bold text-gray-400 uppercase tracking-wide text-[9px]">Endereço da Obra</p>
+                  <p className="text-gray-700 font-semibold mt-0.5 break-words">
+                    {visita?.projects?.leads?.endereco_obra || visita?.projects?.endereco || visita?.endereco || 'Não cadastrado'}
+                  </p>
+                </div>
+
+                {/* Contatos */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="font-bold text-gray-400 uppercase tracking-wide text-[9px]">Telefone</p>
+                    <p className="text-gray-700 font-semibold mt-0.5">
+                      {visita?.projects?.leads?.telefone || (visita as any)?.telefone || 'Não informado'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-bold text-gray-400 uppercase tracking-wide text-[9px]">E-mail</p>
+                    <p className="text-gray-700 font-semibold mt-0.5 break-words">
+                      {visita?.projects?.leads?.email || 'Não informado'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Tipo de Serviço */}
+                <div>
+                  <p className="font-bold text-gray-400 uppercase tracking-wide text-[9px]">Tipo de Serviço</p>
+                  <span className="inline-block bg-orange-50 border border-orange-100 text-orange-700 px-2 py-0.5 rounded-md font-bold mt-1 text-[11px]">
+                    {visita?.projects?.leads?.tipo_servico || 'Não definido'}
+                  </span>
+                </div>
+
+                {/* Materiais Previstos */}
+                <div>
+                  <p className="font-bold text-gray-400 uppercase tracking-wide text-[9px]">Materiais Previstos & Quantidades</p>
+                  <div className="flex flex-wrap gap-1.5 mt-1.5">
+                    {(() => {
+                      const mats = visita?.projects?.leads?.materiais_previstos;
+                      if (!mats || (Array.isArray(mats) && mats.length === 0)) {
+                        return <span className="text-gray-400 italic">Nenhum material previsto cadastrado.</span>;
+                      }
+                      if (Array.isArray(mats)) {
+                        return (mats as any).map((m: any, i: number) => {
+                          const isObj = typeof m === 'object' && m !== null;
+                          const nome = isObj ? m.nome : m;
+                          const qtd = isObj ? m.quantidade : null;
+                          return (
+                            <span
+                              key={i}
+                              className="px-2 py-1 bg-white border border-gray-200 text-gray-600 rounded-lg font-semibold text-[11px] leading-none shrink-0 shadow-sm"
+                            >
+                              {nome} {qtd !== null && <span className="text-orange-500 font-bold ml-0.5">(x{qtd})</span>}
+                            </span>
+                          );
+                        });
+                      }
+                      return <span className="text-gray-700 font-medium">{String(mats)}</span>;
+                    })()}
+                  </div>
+                </div>
+
+                {/* Observações do Projeto */}
+                {visita?.projects?.leads?.observacoes && (
+                  <div>
+                    <p className="font-bold text-gray-400 uppercase tracking-wide text-[9px]">Observações do Cadastro</p>
+                    <p className="text-gray-600 font-medium mt-1 italic leading-normal break-words bg-white border border-gray-100 p-2.5 rounded-lg shadow-sm">
+                      "{visita.projects.leads.observacoes}"
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
 
           {/* Status */}
           <div className="space-y-2">
