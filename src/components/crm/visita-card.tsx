@@ -35,6 +35,7 @@ export default function VisitaCard({
   layout = 'list'
 }: VisitaCardProps) {
   const clienteNome = visita.projects?.leads?.nome || visita.cliente;
+  const nomeEmpresa = visita.empresas?.nome_fantasia || 'OKKA';
 
   // Constrói o endereço completo utilizando os dados do cadastro do Lead se disponíveis,
   // garantindo que o Google Maps encontre a localização correta com base na Rua/Número, Cidade e CEP.
@@ -78,7 +79,7 @@ export default function VisitaCard({
     const dateParts = (visita.data_visita || '').split('-');
     const dataFormatada = dateParts.length === 3 ? dateParts.reverse().join('/') : '—';
     const horario = visita.horario ? visita.horario.substring(0, 5) : '—';
-    return `Olá *${clienteNome}*,\n\nPassando para confirmar o agendamento da sua instalação/visita técnica:\n\n*Data:* ${dataFormatada}\n*Horário:* ${horario} hs\n\nSe houver qualquer dúvida, estamos à disposição!\nEquipe OKKA`;
+    return `Olá *${clienteNome}*,\n\nPassando para confirmar o agendamento da sua instalação/visita técnica:\n\n*Data:* ${dataFormatada}\n*Horário:* ${horario} hs\n\nSe houver qualquer dúvida, estamos à disposição!\nEquipe ${nomeEmpresa}`;
   };
 
   const handleWhatsAppAlert = (e: React.MouseEvent) => {

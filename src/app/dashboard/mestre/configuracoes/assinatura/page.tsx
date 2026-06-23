@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { getFaturamentoDados, iniciarCheckoutAssinatura } from '@/actions/faturamento';
+import { getFaturamentoDados, iniciarCheckoutAssinatura, updateEmpresaNome } from '@/actions/faturamento';
 import { Fatura, PlanoSaaS } from '@/types/database.types';
 
 export default function AssinaturaPage() {
@@ -14,6 +14,34 @@ export default function AssinaturaPage() {
   const [empresa, setEmpresa] = useState<any>(null);
   const [faturas, setFaturas] = useState<Fatura[]>([]);
   const [planos, setPlanos] = useState<PlanoSaaS[]>([]);
+
+  // Estado para editar nome da empresa
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [tempName, setTempName] = useState('');
+  const [updatingName, setUpdatingName] = useState(false);
+
+  const handleUpdateName = async () => {
+    if (!tempName.trim()) {
+      showToast('O nome da empresa não pode ser vazio.', 'error');
+      return;
+    }
+    setUpdatingName(true);
+    try {
+      const res = await updateEmpresaNome(tempName);
+      if (res.success) {
+        showToast('Nome da empresa atualizado com sucesso!');
+        setEmpresa((prev: any) => prev ? { ...prev, nome_fantasia: tempName.trim() } : prev);
+        setIsEditingName(false);
+      } else {
+        showToast(res.error || 'Erro ao atualizar o nome da empresa.', 'error');
+      }
+    } catch (err: any) {
+      console.error(err);
+      showToast('Erro de rede ao atualizar o nome da empresa.', 'error');
+    } finally {
+      setUpdatingName(false);
+    }
+  };
 
   const showToast = (msg: string, type: 'success' | 'error' = 'success') => {
     setToast({ msg, type });
@@ -239,7 +267,58 @@ export default function AssinaturaPage() {
           <div className="bg-white border border-gray-200/80 rounded-3xl p-6 shadow-sm flex flex-col justify-between">
             <div className="space-y-3">
               <span className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Minha Organização</span>
-              <h4 className="text-lg font-black text-gray-900 truncate">{empresa?.nome_fantasia || 'Nome da Empresa'}</h4>
+              <div className="flex items-center justify-between gap-2 group/title min-h-[32px]">
+                {isEditingName ? (
+                  <div className="flex items-center gap-1.5 w-full">
+                    <input
+                      type="text"
+                      value={tempName}
+                      onChange={(e) => setTempName(e.target.value)}
+                      disabled={updatingName}
+                      className="flex-1 px-2.5 py-1 text-sm font-semibold text-gray-900 bg-gray-50 border border-gray-250 rounded-xl focus:outline-none focus:ring-1 focus:ring-[#0a4ee4] focus:border-[#0a4ee4]"
+                      maxLength={100}
+                    />
+                    <button
+                      onClick={handleUpdateName}
+                      disabled={updatingName}
+                      className="p-1 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 text-white rounded-lg transition-colors cursor-pointer"
+                      title="Salvar"
+                    >
+                      <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setIsEditingName(false)}
+                      disabled={updatingName}
+                      className="p-1 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-500 rounded-lg transition-colors cursor-pointer"
+                      title="Cancelar"
+                    >
+                      <svg className="w-4.5 h-4.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <h4 className="text-lg font-black text-gray-900 truncate" title={empresa?.nome_fantasia}>
+                      {empresa?.nome_fantasia || 'Nome da Empresa'}
+                    </h4>
+                    <button
+                      onClick={() => {
+                        setTempName(empresa?.nome_fantasia || '');
+                        setIsEditingName(true);
+                      }}
+                      className="p-1 text-gray-400 hover:text-[#0a4ee4] hover:bg-gray-50 rounded-lg transition-all opacity-0 group-hover/title:opacity-100 focus:opacity-100 cursor-pointer"
+                      title="Editar nome da empresa"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                      </svg>
+                    </button>
+                  </>
+                )}
+              </div>
               
               <div className="space-y-2 pt-2 text-xs">
                 <div className="flex justify-between border-b border-gray-50 pb-2">

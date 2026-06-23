@@ -265,3 +265,35 @@ export async function getFaturaDetails(faturaId: string) {
   }
 }
 
+/**
+ * Atualiza o nome fantasia da empresa atual (somente conta mestra/superadmin)
+ */
+export async function updateEmpresaNome(nomeFantasia: string) {
+  try {
+    const supabase = createServerClient();
+    const context = await getMestreUserContext(supabase);
+
+    if (!nomeFantasia || !nomeFantasia.trim()) {
+      return { success: false, error: 'O nome da empresa não pode ser vazio.' };
+    }
+
+    const { data, error } = await supabase
+      .from('empresas')
+      .update({ nome_fantasia: nomeFantasia.trim() })
+      .eq('id', context.empresa_id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Erro ao atualizar nome da empresa:', error);
+      return { success: false, error: 'Erro ao atualizar o nome da empresa no banco de dados.' };
+    }
+
+    return { success: true, empresa: data };
+  } catch (err: any) {
+    console.error('Erro no updateEmpresaNome:', err);
+    return { success: false, error: err.message || 'Erro inesperado ao atualizar o nome da empresa.' };
+  }
+}
+
+

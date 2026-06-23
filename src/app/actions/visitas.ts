@@ -52,7 +52,7 @@ export async function getGroupedVisitas() {
 
   let query = supabase
     .from('visits')
-    .select('*, projects(*, leads(*)), responsaveis_tecnicos(*)');
+    .select('*, projects(*, leads(*)), responsaveis_tecnicos(*), empresas(*)');
 
   // Aplicar restrição de técnico se for o caso
   if (isTechnicalUser && currentUserId) {
@@ -264,7 +264,7 @@ export async function criarNovaVisita(formData: FormData): Promise<{ success: bo
           agendado_por: currentUserName
         }
       ])
-      .select('*, projects(*, leads(*)), responsaveis_tecnicos(*)')
+      .select('*, projects(*, leads(*)), responsaveis_tecnicos(*), empresas(*)')
       .single();
 
     if (dbError) {

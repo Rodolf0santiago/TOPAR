@@ -409,7 +409,11 @@ export default function SuperAdminDashboard() {
           
           <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={() => setIsCreateModalOpen(true)}
+              onClick={() => {
+                setError(null);
+                setSuccessMsg(null);
+                setIsCreateModalOpen(true);
+              }}
               className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 text-white font-semibold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-violet-600/25 hover:shadow-violet-500/35 transition-all duration-200 flex items-center gap-2 cursor-pointer"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -629,7 +633,9 @@ export default function SuperAdminDashboard() {
                             const isCurrentlyBlocked = emp.status_assinatura === 'inadimplente' || emp.status_assinatura === 'cancelada';
                             const newStatus = isCurrentlyBlocked ? 'ativa' : 'inadimplente';
                             try {
-                              const res = await alternarBloqueioEmpresa(emp.id, newStatus);
+                              setError(null);
+                            setSuccessMsg(null);
+                            const res = await alternarBloqueioEmpresa(emp.id, newStatus);
                               if (res.success) {
                                 setSuccessMsg(`Acesso da empresa "${emp.nome_fantasia}" ${isCurrentlyBlocked ? 'liberado' : 'bloqueado'} com sucesso!`);
                                 loadData();
@@ -651,6 +657,8 @@ export default function SuperAdminDashboard() {
 
                         <button
                           onClick={() => {
+                            setError(null);
+                            setSuccessMsg(null);
                             setSelectedEmpresa(emp);
                             setEditCompanyForm({
                               nome_fantasia: emp.nome_fantasia,
@@ -665,6 +673,8 @@ export default function SuperAdminDashboard() {
 
                         <button
                           onClick={() => {
+                            setError(null);
+                            setSuccessMsg(null);
                             setSelectedEmpresa(emp);
                             setCustomPricingForm({
                               mensalidade_customizada: emp.mensalidade_customizada !== null ? String(emp.mensalidade_customizada) : '',
@@ -681,6 +691,8 @@ export default function SuperAdminDashboard() {
                         
                         <button
                           onClick={() => {
+                            setError(null);
+                            setSuccessMsg(null);
                             setSelectedEmpresa(emp);
                             setIsPasswordModalOpen(true);
                           }}
@@ -724,6 +736,14 @@ export default function SuperAdminDashboard() {
             </div>
 
             <form onSubmit={handleCreateCompany} className="p-6 space-y-4">
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl flex items-start gap-2.5 text-xs font-semibold animate-fade-in">
+                  <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>{error}</div>
+                </div>
+              )}
               {/* Nome Fantasia */}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Nome Fantasia da Empresa</label>
@@ -855,6 +875,14 @@ export default function SuperAdminDashboard() {
             </div>
 
             <form onSubmit={handleResetPassword} className="p-6 space-y-4">
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl flex items-start gap-2.5 text-xs font-semibold animate-fade-in">
+                  <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>{error}</div>
+                </div>
+              )}
               <div className="bg-slate-950 border border-slate-850 p-4 rounded-xl space-y-1">
                 <div className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Usuário Selecionado</div>
                 <div className="text-xs font-semibold text-slate-300">{selectedEmpresa.mestre.nome}</div>
@@ -990,6 +1018,14 @@ export default function SuperAdminDashboard() {
               <div className="h-px bg-slate-850" />
 
               <form onSubmit={handleSaveCustomPricing} className="space-y-4">
+                {error && (
+                  <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl flex items-start gap-2.5 text-xs font-semibold animate-fade-in">
+                    <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div>{error}</div>
+                  </div>
+                )}
                 <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Valores & Campanhas Promocionais</div>
                 
                 {/* Ativar valor personalizado */}
@@ -1100,6 +1136,14 @@ export default function SuperAdminDashboard() {
             </div>
 
             <form onSubmit={handleEditCompany} className="p-6 space-y-4">
+              {error && (
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl flex items-start gap-2.5 text-xs font-semibold animate-fade-in">
+                  <svg className="w-4 h-4 shrink-0 mt-0.5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <div>{error}</div>
+                </div>
+              )}
               {/* Nome Fantasia */}
               <div className="space-y-1.5">
                 <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Nome Fantasia da Empresa</label>

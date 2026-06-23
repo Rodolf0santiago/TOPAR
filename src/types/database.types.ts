@@ -48,6 +48,7 @@ export interface Visita {
   endereco?: string; // Propriedade opcional para dados de mockup local
   projects?: Project & { leads?: Lead | null } | null;
   responsaveis_tecnicos?: ResponsavelTecnico | null;
+  empresas?: Empresa | null;
   whatsapp_enviado?: boolean;
   whatsapp_log?: string | null;
   pdf_proposta_url?: string | null;
@@ -101,6 +102,11 @@ export interface Fatura {
   status: 'Pendente' | 'Paga' | 'Falhou';
   mp_payment_id: string | null;
   criado_em: string;
+}export interface Empresa {
+  id: string;
+  nome_fantasia: string;
+  cnpj: string;
+  status_assinatura: 'ativa' | 'inadimplente' | 'cancelada';
+  assinatura_mp_id?: string | null;
+  criado_em: string;
 }
-
-
