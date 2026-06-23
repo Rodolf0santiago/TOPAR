@@ -24,6 +24,7 @@ const MOCK_FALLBACK_VISITAS: Visita[] = [
     valor_gasto: 150.00,
     observacoes: 'Instalação da malha radiante no banheiro da suíte master.',
     criado_em: '2026-06-18T00:00:00Z',
+    tecnico_id: 't1',
     projects: {
       id: 'p1',
       lead_id: 'l1',
@@ -53,6 +54,7 @@ const MOCK_FALLBACK_VISITAS: Visita[] = [
     valor_gasto: 0,
     observacoes: 'Teste de carga elétrica e calibração dos sensores de piso.',
     criado_em: '2026-06-18T00:00:00Z',
+    tecnico_id: 't2',
     projects: {
       id: 'p2',
       lead_id: 'l2',
@@ -82,6 +84,7 @@ const MOCK_FALLBACK_VISITAS: Visita[] = [
     valor_gasto: 0,
     observacoes: 'Preparação do contrapiso e fixação das guias de isolamento.',
     criado_em: '2026-06-18T00:00:00Z',
+    tecnico_id: 't3',
     projects: {
       id: 'p3',
       lead_id: 'l3',
@@ -111,6 +114,7 @@ const MOCK_FALLBACK_VISITAS: Visita[] = [
     valor_gasto: 0,
     observacoes: 'Medição inicial e entrega técnica do kit de automação.',
     criado_em: '2026-06-18T00:00:00Z',
+    tecnico_id: 't1',
     projects: {
       id: 'p4',
       lead_id: 'l4',
@@ -141,6 +145,7 @@ const MOCK_FALLBACK_VISITAS: Visita[] = [
     valor_gasto: 0,
     observacoes: 'Visita de vistoria atrasada devido a ajuste de agenda do cliente.',
     criado_em: '2026-06-05T00:00:00Z',
+    tecnico_id: 't2',
     projects: {
       id: 'p1',
       lead_id: 'l1',
@@ -241,29 +246,40 @@ export default function DashboardVisitas() {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           let userRole = session.user.user_metadata?.role;
-          const name = session.user.user_metadata?.name || session.user.user_metadata?.nome_completo || session.user.email || 'Usuário';
-          setCurrentUserName(name);
-          if (!userRole) {
-            // Consultar a tabela 'perfis'
-            const { data: perfil } = await supabase
-              .from('perfis')
-              .select('role')
-              .eq('id', session.user.id)
-              .single();
-            if (perfil?.role) {
-              userRole = perfil.role;
-            } else {
-              // Fallback para 'perfis_usuarios'
-              const { data: perfilUsuario } = await supabase
-                .from('perfis_usuarios')
-                .select('role')
-                .eq('id', session.user.id)
-                .single();
-              if (perfilUsuario?.role) {
-                userRole = perfilUsuario.role;
-              }
+          let name = session.user.user_metadata?.name || session.user.user_metadata?.nome_completo;
+          
+          // Consultar a tabela 'perfis_usuarios' para obter nome completo e papel
+          const { data: perfilUsuario } = await supabase
+            .from('perfis_usuarios')
+            .select('role, nome_completo')
+            .eq('id', session.user.id)
+            .single();
+
+          if (perfilUsuario) {
+            if (perfilUsuario.nome_completo) {
+              name = perfilUsuario.nome_completo;
+            }
+            if (!userRole && perfilUsuario.role) {
+              userRole = perfilUsuario.role;
             }
           }
+
+          if (!name) {
+            // Tentar obter da tabela perfis antiga
+            const { data: perfil } = await supabase
+              .from('perfis')
+              .select('nome, role')
+              .eq('id', session.user.id)
+              .single();
+            if (perfil) {
+              if (perfil.nome) name = perfil.nome;
+              if (!userRole && perfil.role) userRole = perfil.role;
+            }
+          }
+
+          const finalName = name || session.user.email || 'Usuário';
+          setCurrentUserName(finalName);
+          
           if (userRole) {
             setCurrentUserRole(userRole.toLowerCase());
           }
@@ -877,11 +893,12 @@ export default function DashboardVisitas() {
                     className="flex flex-col md:flex-row md:items-center gap-4 px-5 py-4 hover:bg-rose-50/40 transition-colors group"
                   >
                     {/* Badge de data/hora */}
-                    <div className="flex items-center justify-between md:block shrink-0 md:text-center min-w-[72px]">
-                      <div className="bg-rose-50 border border-rose-200 rounded-xl px-2.5 py-2 text-center w-full md:w-auto">
-                        <p className="text-[10px] font-black text-rose-500 uppercase tracking-wider">{dataFormatada}</p>
-                        <p className="text-sm font-black text-rose-700 font-mono leading-none mt-0.5">{hora}</p>
-                        <p className="text-[8px] text-rose-400 font-semibold mt-0.5">hs</p>
+                    <div className="flex items-center justify-between md:block shrink-0 min-w-[140px]">
+                      <div className="bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 flex items-center justify-center gap-1.5 w-full md:w-auto shadow-sm">
+                        <span className="text-[11px] font-black text-rose-500 uppercase tracking-wider">{dataFormatada}</span>
+                        <span className="text-[11px] font-semibold text-rose-400">—</span>
+                        <span className="text-xs font-black text-rose-700 font-mono">{hora}</span>
+                        <span className="text-[8px] text-rose-400 font-semibold">hs</span>
                       </div>
                       
                       {/* Badge de atraso no mobile (ao lado da data) */}
@@ -1088,8 +1105,8 @@ export default function DashboardVisitas() {
                       <span className="w-2.5 h-2.5 rounded-full bg-orange-500 animate-pulse" />
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Visitas de Hoje</span>
                     </div>
-                    <h2 className="text-xl md:text-2xl font-black text-gray-900 mt-1">
-                      Hoje, <span className="text-orange-500">{getFormattedHeaderDate(hojeStr)}</span>
+                    <h2 className="text-xl md:text-2xl font-black mt-1 text-transparent bg-clip-text bg-gradient-to-r from-orange-600 via-amber-500 to-red-500">
+                      Hoje, {getFormattedHeaderDate(hojeStr)}
                     </h2>
                   </div>
                   <span className="text-[10px] font-black bg-orange-50 border border-orange-200 text-orange-600 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
@@ -1115,14 +1132,14 @@ export default function DashboardVisitas() {
                 <div className="flex items-center justify-between pb-3 border-b border-gray-50">
                   <div className="flex flex-col">
                     <div className="flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full bg-blue-500" />
+                      <span className="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse" />
                       <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Visitas de Amanhã</span>
                     </div>
-                    <h2 className="text-xl md:text-2xl font-black text-gray-900 mt-1">
-                      Amanhã, <span className="text-blue-500">{getFormattedHeaderDate(amanhaStr)}</span>
+                    <h2 className="text-xl md:text-2xl font-black mt-1 text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-orange-500">
+                      Amanhã, {getFormattedHeaderDate(amanhaStr)}
                     </h2>
                   </div>
-                  <span className="text-[10px] font-black bg-blue-50 border border-blue-200 text-blue-600 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                  <span className="text-[10px] font-black bg-rose-50 border border-rose-200 text-rose-600 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
                     {amanhaFiltered.length} {amanhaFiltered.length === 1 ? 'Agendamento' : 'Agendamentos'}
                   </span>
                 </div>

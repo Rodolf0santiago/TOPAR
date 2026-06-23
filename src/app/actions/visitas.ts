@@ -59,6 +59,18 @@ export async function getGroupedVisitas() {
     query = query.eq('tecnico_id', currentUserId);
   }
 
+  // Buscar perfis para mapear e-mails para nomes completos no agendado_por
+  const { data: perfis } = await supabase
+    .from('perfis_usuarios')
+    .select('nome_completo, email');
+  
+  const emailToNameMap = new Map<string, string>();
+  if (perfis) {
+    perfis.forEach(p => {
+      emailToNameMap.set(p.email.toLowerCase(), p.nome_completo);
+    });
+  }
+
   const { data, error } = await query
     .order('data_visita', { ascending: true })
     .order('horario', { ascending: true });
@@ -68,7 +80,18 @@ export async function getGroupedVisitas() {
     throw new Error(error.message || 'Erro ao carregar cronograma de visitas.');
   }
 
-  const visits = (data || []) as unknown as Visita[];
+  const rawVisits = data || [];
+  const visits = rawVisits.map((v: any) => {
+    let agendadoPorDisplay = v.agendado_por;
+    if (v.agendado_por && emailToNameMap.has(v.agendado_por.toLowerCase())) {
+      agendadoPorDisplay = emailToNameMap.get(v.agendado_por.toLowerCase());
+    }
+    return {
+      ...v,
+      agendado_por: agendadoPorDisplay
+    };
+  }) as unknown as Visita[];
+
 
   // Obter datas corretas no fuso horário do Brasil (America/Sao_Paulo)
   const getBrazilNow = () => {
@@ -214,7 +237,13 @@ export async function criarNovaVisita(formData: FormData): Promise<{ success: bo
     if (token) {
       const { data: { user } } = await supabase.auth.getUser(token);
       if (user) {
-        currentUserName = user.user_metadata?.name || user.user_metadata?.nome_completo || user.email || 'Usuário';
+        // Tentar obter o nome completo do perfil do usuário na tabela perfis_usuarios
+        const { data: perfil } = await supabase
+          .from('perfis_usuarios')
+          .select('nome_completo')
+          .eq('id', user.id)
+          .single();
+        currentUserName = perfil?.nome_completo || user.user_metadata?.name || user.user_metadata?.nome_completo || user.email || 'Usuário';
       }
     }
 
