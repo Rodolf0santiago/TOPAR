@@ -20,7 +20,7 @@ async function checkAdminPermission(supabaseAdmin: ReturnType<typeof createServe
 
   const { data: profile, error: profileError } = await supabaseAdmin
     .from('perfis_usuarios')
-    .select('role, status_acesso')
+    .select('id, role, status_acesso, empresa_id')
     .eq('id', user.id)
     .single();
 
@@ -28,7 +28,7 @@ async function checkAdminPermission(supabaseAdmin: ReturnType<typeof createServe
     throw new Error('Erro ao validar permissões do usuário.');
   }
 
-  if (profile.role !== 'admin' && profile.role !== 'mestre') {
+  if (profile.role !== 'admin' && profile.role !== 'mestre' && profile.role !== 'super_admin') {
     throw new Error('Acesso negado: Permissão restrita a administradores.');
   }
 
@@ -36,7 +36,7 @@ async function checkAdminPermission(supabaseAdmin: ReturnType<typeof createServe
     throw new Error('Acesso negado: Seu usuário está bloqueado.');
   }
 
-  return user; // Retorna o usuário logado para auditoria/verificação
+  return profile;
 }
 
 /**
@@ -44,12 +44,18 @@ async function checkAdminPermission(supabaseAdmin: ReturnType<typeof createServe
  */
 export async function getPerfisUsuarios(): Promise<PerfilUsuario[]> {
   const supabase = createServerClient();
-  await checkAdminPermission(supabase);
+  const adminProfile = await checkAdminPermission(supabase);
 
-  const { data, error } = await supabase
+  let query = supabase
     .from('perfis_usuarios')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (adminProfile.role !== 'super_admin') {
+    query = query.eq('empresa_id', adminProfile.empresa_id);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     console.error('Erro ao buscar perfis:', error);
@@ -70,11 +76,26 @@ export async function updatePerfilUsuario(
   }
 ): Promise<PerfilUsuario> {
   const supabase = createServerClient();
-  const currentUser = await checkAdminPermission(supabase);
+  const adminProfile = await checkAdminPermission(supabase);
 
   // Impedir que o administrador edite a si próprio (evita auto-bloqueio)
-  if (targetUserId === currentUser.id) {
+  if (targetUserId === adminProfile.id) {
     throw new Error('Ação inválida: Você não pode alterar sua própria permissão ou bloquear a si mesmo.');
+  }
+
+  // Validar se o perfil a ser editado pertence à mesma empresa
+  const { data: targetProfile, error: targetError } = await supabase
+    .from('perfis_usuarios')
+    .select('empresa_id')
+    .eq('id', targetUserId)
+    .single();
+
+  if (targetError || !targetProfile) {
+    throw new Error('Colaborador não encontrado.');
+  }
+
+  if (adminProfile.role !== 'super_admin' && targetProfile.empresa_id !== adminProfile.empresa_id) {
+    throw new Error('Acesso negado: Este colaborador pertence a outra organização.');
   }
 
   // 1. Atualizar no banco de dados (tabela perfis_usuarios)
@@ -133,7 +154,22 @@ export async function atualizarUsuarioCompleto(
     const supabaseAdmin = createServerClient();
     
     // 1. Validar se o requisitante é admin/mestre ativo
-    await checkAdminPermission(supabaseAdmin);
+    const adminProfile = await checkAdminPermission(supabaseAdmin);
+
+    // Validar se o perfil a ser editado pertence à mesma empresa
+    const { data: targetProfile, error: targetError } = await supabaseAdmin
+      .from('perfis_usuarios')
+      .select('empresa_id')
+      .eq('id', targetUserId)
+      .single();
+
+    if (targetError || !targetProfile) {
+      return { success: false, error: 'Colaborador não encontrado.' };
+    }
+
+    if (adminProfile.role !== 'super_admin' && targetProfile.empresa_id !== adminProfile.empresa_id) {
+      return { success: false, error: 'Acesso negado: Este colaborador pertence a outra organização.' };
+    }
 
     // 2. Montar atualizações no Supabase Auth Admin
     const authUpdates: any = {};
@@ -201,7 +237,7 @@ export async function atualizarUsuarioCompleto(
       }
       updatedProfile = data;
     } else {
-      // Buscar perfil atualizado para retornar
+      // Buscar perfil updated para retornar
       const { data, error: dbError } = await supabaseAdmin
         .from('perfis_usuarios')
         .select('*')
@@ -296,7 +332,8 @@ export async function criarUsuarioCompleto(dados: {
     const supabaseAdmin = createServerClient();
     
     // 1. Validar se o requisitante é admin/mestre ativo
-    await checkAdminPermission(supabaseAdmin);
+    const adminProfile = await checkAdminPermission(supabaseAdmin);
+    const empresaId = adminProfile.empresa_id;
 
     // 2. Validações dos dados de entrada
     if (!dados.nome_completo.trim()) {
@@ -323,6 +360,7 @@ export async function criarUsuarioCompleto(dados: {
         role: dados.role,
         telefone: telefoneFormatado,
         status_acesso: statusAcesso,
+        empresa_id: empresaId,
       },
     });
 
@@ -359,6 +397,7 @@ export async function criarUsuarioCompleto(dados: {
           nome_completo: nomeFormatado,
           role: roleDb,
           status_acesso: statusAcesso,
+          empresa_id: empresaId,
         })
         .eq('id', novoId)
         .select()
@@ -372,6 +411,7 @@ export async function criarUsuarioCompleto(dados: {
             nome_completo: nomeFormatado,
             role: roleDb === 'admin' ? 'admin' : 'tecnico',
             status_acesso: statusAcesso,
+            empresa_id: empresaId,
           })
           .eq('id', novoId)
           .select()
@@ -389,6 +429,7 @@ export async function criarUsuarioCompleto(dados: {
           email: emailFormatado,
           role: roleDb,
           status_acesso: statusAcesso,
+          empresa_id: empresaId,
         })
         .select()
         .single();
@@ -403,6 +444,7 @@ export async function criarUsuarioCompleto(dados: {
             email: emailFormatado,
             role: roleDb === 'admin' ? 'admin' : 'tecnico',
             status_acesso: statusAcesso,
+            empresa_id: empresaId,
           })
           .select()
           .single();
@@ -427,6 +469,7 @@ export async function criarUsuarioCompleto(dados: {
           nome: nomeFormatado,
           telefone: telefoneFormatado,
           email: emailFormatado,
+          empresa_id: empresaId,
         });
 
       if (rtError) {
@@ -445,6 +488,7 @@ export async function criarUsuarioCompleto(dados: {
           telefone: telefoneFormatado,
           role: dados.role,
           email: emailFormatado,
+          empresa_id: empresaId,
         });
     } catch (e) {
       // Ignorar falha se a tabela 'perfis' não existir

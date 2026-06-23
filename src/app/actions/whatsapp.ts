@@ -165,14 +165,53 @@ async function sendWhatsAppHttp(params: SendParams): Promise<{ success: boolean;
 export async function getWhatsappConfig(): Promise<WhatsappConfig> {
   try {
     const supabase = createServerClient();
+    
+    // Obter o token do usuário logado e buscar seu empresa_id
+    const cookieStore = await cookies();
+    const token = cookieStore.get('sb-access-token')?.value;
+    if (!token) {
+      throw new Error('Não autorizado: Sessão ausente.');
+    }
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      throw new Error('Não autorizado: Sessão inválida.');
+    }
+    const { data: perfil } = await supabase
+      .from('perfis_usuarios')
+      .select('role, empresa_id')
+      .eq('id', user.id)
+      .single();
+
+    if (!perfil) {
+      throw new Error('Perfil não encontrado.');
+    }
+
     const { data, error } = await supabase
       .from('whatsapp_config')
       .select('*')
-      .eq('id', 1)
-      .single();
+      .eq('empresa_id', perfil.empresa_id)
+      .maybeSingle();
 
     if (error) {
       throw error;
+    }
+
+    if (!data) {
+      // Retorna configuração padrão vinculada à empresa do usuário
+      return {
+        id: 0,
+        ativo: false,
+        api_provider: 'evolution',
+        api_url: '',
+        api_key: '',
+        instancia: '',
+        antecedencia_minutos: 60,
+        mensagem_template: 'Olá {nome_tecnico}, sua próxima visita técnica para o cliente {cliente_nome} no endereço {endereco_obra} será daqui a {antecedencia} (agendada para às {horario_visita}).',
+        headers_customizados: null,
+        payload_customizado: null,
+        empresa_id: perfil.empresa_id,
+        updated_at: new Date().toISOString(),
+      } as unknown as WhatsappConfig;
     }
 
     return data as WhatsappConfig;
@@ -191,7 +230,7 @@ export async function getWhatsappConfig(): Promise<WhatsappConfig> {
       headers_customizados: null,
       payload_customizado: null,
       updated_at: new Date().toISOString(),
-    };
+    } as unknown as WhatsappConfig;
   }
 }
 
@@ -203,18 +242,52 @@ export async function saveWhatsappConfig(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = createServerClient();
-    await checkAdminPermission(supabase);
+    const adminUser = await checkAdminPermission(supabase);
 
-    const { error } = await supabase
+    const { data: perfil } = await supabase
+      .from('perfis_usuarios')
+      .select('empresa_id')
+      .eq('id', adminUser.id)
+      .single();
+
+    if (!perfil || !perfil.empresa_id) {
+      return { success: false, error: 'Empresa do administrador não identificada.' };
+    }
+
+    // Verifica programaticamente se existe configuração para esta empresa
+    const { data: existing } = await supabase
       .from('whatsapp_config')
-      .upsert({
-        id: 1,
-        ...updates,
-        updated_at: new Date().toISOString(),
-      });
+      .select('id')
+      .eq('empresa_id', perfil.empresa_id)
+      .maybeSingle();
 
-    if (error) {
-      throw error;
+    if (existing) {
+      // Atualiza
+      const { error } = await supabase
+        .from('whatsapp_config')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+      if (error) throw error;
+    } else {
+      // Insere: busca maior id para evitar conflito de chave primária caso a migração identity não tenha rodado
+      const { data: allConfigs } = await supabase
+        .from('whatsapp_config')
+        .select('id')
+        .order('id', { ascending: false });
+      const nextId = allConfigs && allConfigs.length > 0 ? Math.max(...allConfigs.map((c: any) => c.id)) + 1 : 1;
+
+      const { error } = await supabase
+        .from('whatsapp_config')
+        .insert({
+          id: nextId,
+          ...updates,
+          empresa_id: perfil.empresa_id,
+          updated_at: new Date().toISOString(),
+        });
+      if (error) throw error;
     }
 
     return { success: true };
@@ -267,24 +340,22 @@ export async function testWhatsappSend(
 /**
  * Executa o loop de verificação e envio de notificações para visitas próximas
  */
-export async function runCronNotificationCheck(): Promise<{ success: boolean; sentCount?: number; skippedCount?: number; message?: string; error?: string }> {
+export async function runCronNotificationCheck(empresaIdFilter?: string): Promise<{ success: boolean; sentCount?: number; skippedCount?: number; message?: string; error?: string }> {
   try {
     const supabase = createServerClient();
-    const config = await getWhatsappConfig();
-    if (!config.ativo) {
-      return { success: false, error: 'A integração com WhatsApp está desabilitada nas configurações.' };
-    }
-
-    if (!config.api_url) {
-      return { success: false, error: 'A URL da API de WhatsApp não está configurada.' };
-    }
-
+    
     // Buscar visitas "Agendada" que não foram enviadas e têm técnico
-    const { data: visitas, error: visitasError } = await supabase
+    let query = supabase
       .from('visits')
       .select('*, projects(*, leads(*)), responsaveis_tecnicos(*)')
       .eq('status_visita', 'Agendada')
       .eq('whatsapp_enviado', false);
+
+    if (empresaIdFilter) {
+      query = query.eq('empresa_id', empresaIdFilter);
+    }
+
+    const { data: visitas, error: visitasError } = await query;
 
     if (visitasError) {
       throw visitasError;
@@ -298,7 +369,33 @@ export async function runCronNotificationCheck(): Promise<{ success: boolean; se
     let skippedCount = 0;
     const now = new Date();
 
+    // Cache das configurações por empresa_id para otimizar as consultas ao banco
+    const configCache = new Map<string, WhatsappConfig | null>();
+
     for (const visita of visitas) {
+      const empresaId = visita.empresa_id;
+      if (!empresaId) continue;
+
+      let config: WhatsappConfig | null = configCache.get(empresaId) ?? null;
+      if (configCache.get(empresaId) === undefined) {
+        const { data: dbConfig } = await supabase
+          .from('whatsapp_config')
+          .select('*')
+          .eq('empresa_id', empresaId)
+          .maybeSingle();
+        config = dbConfig || null;
+        configCache.set(empresaId, config);
+      }
+
+      if (!config || !config.ativo) {
+        // Integração desativada ou não configurada para esta empresa
+        continue;
+      }
+
+      if (!config.api_url) {
+        continue;
+      }
+
       const tecnico = visita.responsaveis_tecnicos;
       if (!tecnico || !tecnico.telefone) {
         continue;
@@ -404,9 +501,19 @@ export async function runCronNotificationCheck(): Promise<{ success: boolean; se
 export async function triggerManualCheck(): Promise<{ success: boolean; sentCount?: number; skippedCount?: number; error?: string }> {
   try {
     const supabase = createServerClient();
-    await checkAdminPermission(supabase);
+    const adminUser = await checkAdminPermission(supabase);
 
-    const res = await runCronNotificationCheck();
+    const { data: perfil } = await supabase
+      .from('perfis_usuarios')
+      .select('empresa_id')
+      .eq('id', adminUser.id)
+      .single();
+
+    if (!perfil || !perfil.empresa_id) {
+      return { success: false, error: 'Empresa do administrador não identificada.' };
+    }
+
+    const res = await runCronNotificationCheck(perfil.empresa_id);
     if (!res.success) {
       return { success: false, error: res.error };
     }

@@ -37,39 +37,27 @@ async function validarAcessoAdmin(supabaseAdmin: ReturnType<typeof createServerC
     throw new Error('Não autorizado: Sessão inválida.');
   }
 
-  // Obter a role do usuário a partir dos metadados ou das tabelas públicas de perfil
-  let role = user.user_metadata?.role || '';
+  // Obter o perfil completo do usuário a partir do banco de dados (tabela perfis_usuarios)
+  const { data: perfilUsuario, error: perfilError } = await supabaseAdmin
+    .from('perfis_usuarios')
+    .select('role, empresa_id, status_acesso')
+    .eq('id', user.id)
+    .single();
 
-  if (!role) {
-    // 1. Tentar ler da tabela 'perfis'
-    const { data: perfil } = await supabaseAdmin
-      .from('perfis')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (perfil?.role) {
-      role = perfil.role;
-    } else {
-      // 2. Tentar ler da tabela 'perfis_usuarios'
-      const { data: perfilUsuario } = await supabaseAdmin
-        .from('perfis_usuarios')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (perfilUsuario?.role) {
-        role = perfilUsuario.role;
-      }
-    }
+  if (perfilError || !perfilUsuario) {
+    throw new Error('Acesso negado: Perfil de usuário não encontrado.');
   }
 
-  const normalizedRole = (role || '').toLowerCase();
-  if (normalizedRole !== 'admin' && normalizedRole !== 'mestre') {
+  if (perfilUsuario.status_acesso === false) {
+    throw new Error('Acesso negado: Seu usuário está bloqueado.');
+  }
+
+  const normalizedRole = (perfilUsuario.role || '').toLowerCase();
+  if (normalizedRole !== 'admin' && normalizedRole !== 'mestre' && normalizedRole !== 'super_admin') {
     throw new Error('Acesso negado: Permissão restrita a administradores e mestres.');
   }
 
-  return user;
+  return { user, empresa_id: perfilUsuario.empresa_id };
 }
 
 /**
@@ -100,7 +88,8 @@ export async function criarMembroEquipe(dados: CriarMembroEquipeDados): Promise<
   const supabaseAdmin = createServerClient();
 
   // 3. Validar se o requisitante tem autorização
-  await validarAcessoAdmin(supabaseAdmin);
+  const adminInfo = await validarAcessoAdmin(supabaseAdmin);
+  const empresaId = adminInfo.empresa_id;
 
   // 4. Provisionar o usuário no Supabase Auth usando inviteUserByEmail.
   // Isso dispara o convite por e-mail para que ele defina sua senha sem
@@ -113,6 +102,7 @@ export async function criarMembroEquipe(dados: CriarMembroEquipeDados): Promise<
         nome_completo: nomeFormatado,
         role: roleFormatada,
         telefone: telefoneFormatado,
+        empresa_id: empresaId,
       },
     }
   );
@@ -145,6 +135,7 @@ export async function criarMembroEquipe(dados: CriarMembroEquipeDados): Promise<
         telefone: telefoneFormatado,
         role: roleFormatada,
         email: emailFormatado,
+        empresa_id: empresaId,
       }
     ])
     .select()
@@ -164,6 +155,7 @@ export async function criarMembroEquipe(dados: CriarMembroEquipeDados): Promise<
           email: emailFormatado,
           role: roleFormatada,
           status_acesso: true,
+          empresa_id: empresaId,
         }
       ])
       .select()
@@ -200,6 +192,23 @@ export async function criarMembroEquipe(dados: CriarMembroEquipeDados): Promise<
       status_acesso: perfilData.status_acesso ?? true,
       created_at: perfilData.created_at || new Date().toISOString(),
     };
+  }
+
+  // 6. Se for instalador, inserir também na tabela 'responsaveis_tecnicos' para que apareça na agenda
+  if (roleFormatada === 'instalador') {
+    const { error: rtError } = await supabaseAdmin
+      .from('responsaveis_tecnicos')
+      .insert({
+        id: novoId,
+        nome: nomeFormatado,
+        telefone: telefoneFormatado,
+        email: emailFormatado,
+        empresa_id: empresaId,
+      });
+
+    if (rtError) {
+      console.error('Erro ao inserir em responsaveis_tecnicos no criarMembroEquipe:', rtError);
+    }
   }
 
   return resultadoSalvo as MembroEquipe;

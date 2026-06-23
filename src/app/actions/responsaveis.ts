@@ -2,6 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase';
 import { ResponsavelTecnico } from '@/types/database.types';
+import { cookies } from 'next/headers';
 
 export async function createResponsavelTecnico(
   data: {
@@ -19,25 +20,33 @@ export async function createResponsavelTecnico(
 
   const supabaseAdmin = createServerClient();
 
-  // 2. Se um token foi fornecido, validamos a identidade e a role de admin do chamador
-  if (token) {
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-    
-    if (authError || !user) {
-      throw new Error('Não autorizado: Sessão inválida ou expirada.');
-    }
-
-    // Verificar se a role é 'admin' ou 'mestre' na tabela perfis_usuarios
-    const { data: profile, error: profileError } = await supabaseAdmin
-      .from('perfis_usuarios')
-      .select('role')
-      .eq('id', user.id)
-      .single();
-
-    if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'mestre')) {
-      throw new Error('Acesso negado: Apenas administradores podem cadastrar responsáveis técnicos.');
-    }
+  // Validar a sessão do chamador e obter a empresa
+  const jwtToken = token || (await cookies()).get('sb-access-token')?.value;
+  if (!jwtToken) {
+    throw new Error('Não autorizado: Sessão ausente.');
   }
+
+  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(jwtToken);
+  if (authError || !user) {
+    throw new Error('Não autorizado: Sessão inválida ou expirada.');
+  }
+
+  // Verificar se a role é 'admin', 'mestre' ou 'super_admin' na tabela perfis_usuarios
+  const { data: profile, error: profileError } = await supabaseAdmin
+    .from('perfis_usuarios')
+    .select('role, status_acesso, empresa_id')
+    .eq('id', user.id)
+    .single();
+
+  if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'mestre' && profile.role !== 'super_admin')) {
+    throw new Error('Acesso negado: Apenas administradores podem cadastrar responsáveis técnicos.');
+  }
+
+  if (profile.status_acesso === false) {
+    throw new Error('Acesso negado: Seu usuário está bloqueado.');
+  }
+
+  const empresaId = profile.empresa_id;
 
   // 3. Criar o usuário no auth.users usando a API de Admin
   const senhaDefinida = data.senha && data.senha.trim() ? data.senha.trim() : 'HublyTeam2026!';
@@ -49,6 +58,7 @@ export async function createResponsavelTecnico(
     user_metadata: {
       name: data.nome.trim(),
       role: 'tecnico',
+      empresa_id: empresaId,
     },
   });
 
@@ -73,6 +83,7 @@ export async function createResponsavelTecnico(
         nome: data.nome.trim(),
         telefone: data.telefone.trim(),
         email: data.email.trim(),
+        empresa_id: empresaId,
       },
     ])
     .select()
@@ -110,24 +121,45 @@ export async function deleteResponsavelTecnico(
 
     const supabaseAdmin = createServerClient();
 
-    // 1. Validar se o chamador é administrador
-    if (token) {
-      const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-      
-      if (authError || !user) {
-        return { success: false, error: 'Não autorizado: Sessão inválida ou expirada.' };
-      }
+    // Validar a sessão do chamador e obter a empresa
+    const jwtToken = token || (await cookies()).get('sb-access-token')?.value;
+    if (!jwtToken) {
+      return { success: false, error: 'Não autorizado: Sessão ausente.' };
+    }
 
-      // Verificar se a role é 'admin' ou 'mestre' na tabela perfis_usuarios
-      const { data: profile, error: profileError } = await supabaseAdmin
-        .from('perfis_usuarios')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(jwtToken);
+    if (authError || !user) {
+      return { success: false, error: 'Não autorizado: Sessão inválida ou expirada.' };
+    }
 
-      if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'mestre')) {
-        return { success: false, error: 'Acesso negado: Apenas administradores podem excluir colaboradores.' };
-      }
+    // Verificar se a role é 'admin', 'mestre' ou 'super_admin' na tabela perfis_usuarios
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('perfis_usuarios')
+      .select('role, status_acesso, empresa_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile || (profile.role !== 'admin' && profile.role !== 'mestre' && profile.role !== 'super_admin')) {
+      return { success: false, error: 'Acesso negado: Apenas administradores podem excluir colaboradores.' };
+    }
+
+    if (profile.status_acesso === false) {
+      return { success: false, error: 'Acesso negado: Seu usuário está bloqueado.' };
+    }
+
+    // Validar se o perfil a ser excluído pertence à mesma empresa
+    const { data: targetProfile, error: targetError } = await supabaseAdmin
+      .from('perfis_usuarios')
+      .select('empresa_id')
+      .eq('id', id)
+      .single();
+
+    if (targetError || !targetProfile) {
+      return { success: false, error: 'Colaborador não encontrado.' };
+    }
+
+    if (profile.role !== 'super_admin' && targetProfile.empresa_id !== profile.empresa_id) {
+      return { success: false, error: 'Acesso negado: Este colaborador pertence a outra organização.' };
     }
 
     // 2. Deletar do auth.users (o delete cascade do PostgreSQL cuidará do registro na tabela pública)

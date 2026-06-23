@@ -12,51 +12,47 @@ export async function getGroupedVisitas() {
   const cookieStore = await cookies();
   const token = cookieStore.get('sb-access-token')?.value;
   
-  let currentUserId: string | null = null;
-  let isTechnicalUser = false;
-
-  if (token) {
-    const { data: { user } } = await supabase.auth.getUser(token);
-    if (user) {
-      currentUserId = user.id;
-      let role = user.user_metadata?.role || '';
-      
-      if (!role) {
-        // Tentar obter da tabela perfis_usuarios
-        const { data: perfil } = await supabase
-          .from('perfis_usuarios')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-        if (perfil?.role) {
-          role = perfil.role;
-        } else {
-          // Tentar obter da tabela perfis
-          const { data: perfilAntigo } = await supabase
-            .from('perfis')
-            .select('role')
-            .eq('id', user.id)
-            .single();
-          if (perfilAntigo?.role) {
-            role = perfilAntigo.role;
-          }
-        }
-      }
-      
-      const normalizedRole = (role || '').toLowerCase();
-      if (normalizedRole === 'tecnico' || normalizedRole === 'instalador') {
-        isTechnicalUser = true;
-      }
-    }
+  if (!token) {
+    throw new Error('Não autorizado: Sessão ausente.');
   }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    throw new Error('Não autorizado: Sessão inválida.');
+  }
+
+  // Obter perfil do banco
+  const { data: perfil, error: perfilError } = await supabase
+    .from('perfis_usuarios')
+    .select('role, empresa_id, status_acesso')
+    .eq('id', user.id)
+    .single();
+
+  if (perfilError || !perfil) {
+    throw new Error('Erro ao carregar perfil do usuário.');
+  }
+
+  if (perfil.status_acesso === false) {
+    throw new Error('Acesso negado: Seu usuário está bloqueado.');
+  }
+
+  const normalizedRole = (perfil.role || '').toLowerCase();
+  const isTechnicalUser = normalizedRole === 'tecnico' || normalizedRole === 'instalador';
+  const isSuperAdmin = normalizedRole === 'super_admin';
+  const userEmpresaId = perfil.empresa_id;
 
   let query = supabase
     .from('visits')
     .select('*, projects(*, leads(*)), responsaveis_tecnicos(*), empresas(*)');
 
+  // Enforce company isolation
+  if (!isSuperAdmin) {
+    query = query.eq('empresa_id', userEmpresaId);
+  }
+
   // Aplicar restrição de técnico se for o caso
-  if (isTechnicalUser && currentUserId) {
-    query = query.eq('tecnico_id', currentUserId);
+  if (isTechnicalUser) {
+    query = query.eq('tecnico_id', user.id);
   }
 
   // Buscar perfis para mapear e-mails para nomes completos no agendado_por
@@ -156,9 +152,54 @@ export async function getGroupedVisitas() {
  */
 export async function deleteVisitaAction(id: string): Promise<{ success: boolean; error?: string }> {
   try {
-    // createServerClient usa SUPABASE_SERVICE_ROLE_KEY → bypassa RLS
     const supabase = createServerClient();
     
+    const cookieStore = await cookies();
+    const token = cookieStore.get('sb-access-token')?.value;
+    
+    if (!token) {
+      return { success: false, error: 'Não autorizado: Sessão ausente.' };
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return { success: false, error: 'Não autorizado: Sessão inválida.' };
+    }
+
+    const { data: perfil, error: perfilError } = await supabase
+      .from('perfis_usuarios')
+      .select('role, empresa_id, status_acesso')
+      .eq('id', user.id)
+      .single();
+
+    if (perfilError || !perfil) {
+      return { success: false, error: 'Erro ao validar permissões do usuário.' };
+    }
+
+    if (perfil.status_acesso === false) {
+      return { success: false, error: 'Acesso negado: Seu usuário está bloqueado.' };
+    }
+
+    const normalizedRole = (perfil.role || '').toLowerCase();
+    if (normalizedRole !== 'admin' && normalizedRole !== 'mestre' && normalizedRole !== 'super_admin') {
+      return { success: false, error: 'Acesso negado: Permissão restrita a administradores e mestres.' };
+    }
+
+    // Validar se a visita pertence à mesma empresa
+    const { data: targetVisit, error: visitError } = await supabase
+      .from('visits')
+      .select('empresa_id')
+      .eq('id', id)
+      .single();
+
+    if (visitError || !targetVisit) {
+      return { success: false, error: 'Visita não encontrada.' };
+    }
+
+    if (normalizedRole !== 'super_admin' && targetVisit.empresa_id !== perfil.empresa_id) {
+      return { success: false, error: 'Acesso negado: Esta visita pertence a outra organização.' };
+    }
+
     const { error } = await supabase
       .from('visits')
       .delete()
@@ -232,19 +273,30 @@ export async function criarNovaVisita(formData: FormData): Promise<{ success: bo
     }
 
     let currentUserName: string | null = null;
+    let userEmpresaId: string | null = null;
     const cookieStore = await cookies();
     const token = cookieStore.get('sb-access-token')?.value;
     if (token) {
       const { data: { user } } = await supabase.auth.getUser(token);
       if (user) {
-        // Tentar obter o nome completo do perfil do usuário na tabela perfis_usuarios
+        // Tentar obter o nome completo do perfil do usuário na tabela perfis_usuarios e empresa_id
         const { data: perfil } = await supabase
           .from('perfis_usuarios')
-          .select('nome_completo')
+          .select('nome_completo, empresa_id')
           .eq('id', user.id)
           .single();
-        currentUserName = perfil?.nome_completo || user.user_metadata?.name || user.user_metadata?.nome_completo || user.email || 'Usuário';
+        if (perfil) {
+          currentUserName = perfil.nome_completo;
+          userEmpresaId = perfil.empresa_id;
+        }
+        if (!currentUserName) {
+          currentUserName = user.user_metadata?.name || user.user_metadata?.nome_completo || user.email || 'Usuário';
+        }
       }
+    }
+
+    if (!userEmpresaId) {
+      return { success: false, error: 'Não foi possível associar a visita à sua empresa. Faça login novamente.' };
     }
 
     // Inserção no banco
@@ -261,7 +313,8 @@ export async function criarNovaVisita(formData: FormData): Promise<{ success: bo
           observacoes: observacoes,
           tecnico_id: tecnicoId || null,
           pdf_proposta_url: pdfUrl,
-          agendado_por: currentUserName
+          agendado_por: currentUserName,
+          empresa_id: userEmpresaId
         }
       ])
       .select('*, projects(*, leads(*)), responsaveis_tecnicos(*), empresas(*)')

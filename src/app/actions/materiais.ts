@@ -1,11 +1,13 @@
 'use server';
 
 import { createServerClient } from '@/lib/supabase';
+import { cookies } from 'next/headers';
 
 export interface MaterialPredefinido {
   id: string;
   nome: string;
   criado_em?: string;
+  tipo_servico?: string | null;
 }
 
 const FALLBACK_MATERIALS: MaterialPredefinido[] = [
@@ -27,12 +29,34 @@ const FALLBACK_MATERIALS: MaterialPredefinido[] = [
 export async function getMateriaisPredefinidos(tipoServico?: string): Promise<MaterialPredefinido[]> {
   try {
     const supabase = createServerClient();
+    
+    // Obter o token do usuário logado e buscar seu empresa_id
+    const cookieStore = await cookies();
+    const token = cookieStore.get('sb-access-token')?.value;
+    let empresaId = '00000000-0000-0000-0000-000000000000';
+    let isSuperAdmin = false;
+
+    if (token) {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (user) {
+        const { data: perfil } = await supabase
+          .from('perfis_usuarios')
+          .select('role, empresa_id')
+          .eq('id', user.id)
+          .single();
+        if (perfil) {
+          empresaId = perfil.empresa_id || empresaId;
+          isSuperAdmin = perfil.role === 'super_admin';
+        }
+      }
+    }
+
     let query = supabase
       .from('materiais_predefinidos')
       .select('*');
 
-    if (tipoServico) {
-      query = query.or(`tipo_servico.eq."${tipoServico}",tipo_servico.is.null`);
+    if (!isSuperAdmin) {
+      query = query.or(`empresa_id.eq.${empresaId},empresa_id.eq.00000000-0000-0000-0000-000000000000`);
     }
 
     const { data, error } = await query.order('nome', { ascending: true });
@@ -45,7 +69,11 @@ export async function getMateriaisPredefinidos(tipoServico?: string): Promise<Ma
       return FALLBACK_MATERIALS;
     }
 
-    return data as MaterialPredefinido[];
+    let result = (data || []) as MaterialPredefinido[];
+    if (tipoServico) {
+      result = result.filter(m => !m.tipo_servico || m.tipo_servico === tipoServico);
+    }
+    return result;
   } catch (err) {
     console.warn('Erro ao conectar ao banco para buscar materiais, usando fallback:', err);
     return FALLBACK_MATERIALS;
@@ -61,9 +89,44 @@ export async function criarMaterialPredefinido(nome: string, tipoServico?: strin
       return { success: false, error: 'O nome do material é obrigatório.' };
     }
     const supabase = createServerClient();
+
+    // Obter o token do usuário logado e buscar seu empresa_id
+    const cookieStore = await cookies();
+    const token = cookieStore.get('sb-access-token')?.value;
+    if (!token) {
+      return { success: false, error: 'Não autorizado: Sessão ausente.' };
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return { success: false, error: 'Não autorizado: Sessão inválida.' };
+    }
+
+    const { data: perfil } = await supabase
+      .from('perfis_usuarios')
+      .select('role, empresa_id, status_acesso')
+      .eq('id', user.id)
+      .single();
+
+    if (!perfil) {
+      return { success: false, error: 'Perfil do usuário não encontrado.' };
+    }
+
+    if (perfil.status_acesso === false) {
+      return { success: false, error: 'Seu usuário está bloqueado.' };
+    }
+
+    if (perfil.role !== 'admin' && perfil.role !== 'mestre' && perfil.role !== 'super_admin') {
+      return { success: false, error: 'Acesso negado: Permissão restrita a administradores.' };
+    }
+
     const { data, error } = await supabase
       .from('materiais_predefinidos')
-      .insert([{ nome: nome.trim(), tipo_servico: tipoServico || null }])
+      .insert([{ 
+        nome: nome.trim(), 
+        tipo_servico: tipoServico || null,
+        empresa_id: perfil.empresa_id
+      }])
       .select()
       .single();
 
@@ -88,6 +151,52 @@ export async function atualizarMaterialPredefinido(id: string, nome: string): Pr
       return { success: false, error: 'ID e novo nome são obrigatórios.' };
     }
     const supabase = createServerClient();
+
+    // Obter o token do usuário logado e buscar seu empresa_id
+    const cookieStore = await cookies();
+    const token = cookieStore.get('sb-access-token')?.value;
+    if (!token) {
+      return { success: false, error: 'Não autorizado: Sessão ausente.' };
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return { success: false, error: 'Não autorizado: Sessão inválida.' };
+    }
+
+    const { data: perfil } = await supabase
+      .from('perfis_usuarios')
+      .select('role, empresa_id, status_acesso')
+      .eq('id', user.id)
+      .single();
+
+    if (!perfil) {
+      return { success: false, error: 'Perfil do usuário não encontrado.' };
+    }
+
+    if (perfil.status_acesso === false) {
+      return { success: false, error: 'Seu usuário está bloqueado.' };
+    }
+
+    if (perfil.role !== 'admin' && perfil.role !== 'mestre' && perfil.role !== 'super_admin') {
+      return { success: false, error: 'Acesso negado: Permissão restrita a administradores.' };
+    }
+
+    // Validar se o material pertence à mesma empresa
+    const { data: targetMaterial, error: materialError } = await supabase
+      .from('materiais_predefinidos')
+      .select('empresa_id')
+      .eq('id', id)
+      .single();
+
+    if (materialError || !targetMaterial) {
+      return { success: false, error: 'Material não encontrado.' };
+    }
+
+    if (perfil.role !== 'super_admin' && targetMaterial.empresa_id !== perfil.empresa_id) {
+      return { success: false, error: 'Acesso negado: Este material pertence a outra organização.' };
+    }
+
     const { error } = await supabase
       .from('materiais_predefinidos')
       .update({ nome: nome.trim() })
@@ -114,6 +223,52 @@ export async function deletarMaterialPredefinido(id: string): Promise<{ success:
       return { success: false, error: 'O ID do material é obrigatório.' };
     }
     const supabase = createServerClient();
+
+    // Obter o token do usuário logado e buscar seu empresa_id
+    const cookieStore = await cookies();
+    const token = cookieStore.get('sb-access-token')?.value;
+    if (!token) {
+      return { success: false, error: 'Não autorizado: Sessão ausente.' };
+    }
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+    if (authError || !user) {
+      return { success: false, error: 'Não autorizado: Sessão inválida.' };
+    }
+
+    const { data: perfil } = await supabase
+      .from('perfis_usuarios')
+      .select('role, empresa_id, status_acesso')
+      .eq('id', user.id)
+      .single();
+
+    if (!perfil) {
+      return { success: false, error: 'Perfil do usuário não encontrado.' };
+    }
+
+    if (perfil.status_acesso === false) {
+      return { success: false, error: 'Seu usuário está bloqueado.' };
+    }
+
+    if (perfil.role !== 'admin' && perfil.role !== 'mestre' && perfil.role !== 'super_admin') {
+      return { success: false, error: 'Acesso negado: Permissão restrita a administradores.' };
+    }
+
+    // Validar se o material pertence à mesma empresa
+    const { data: targetMaterial, error: materialError } = await supabase
+      .from('materiais_predefinidos')
+      .select('empresa_id')
+      .eq('id', id)
+      .single();
+
+    if (materialError || !targetMaterial) {
+      return { success: false, error: 'Material não encontrado.' };
+    }
+
+    if (perfil.role !== 'super_admin' && targetMaterial.empresa_id !== perfil.empresa_id) {
+      return { success: false, error: 'Acesso negado: Este material pertence a outra organização.' };
+    }
+
     const { error } = await supabase
       .from('materiais_predefinidos')
       .delete()

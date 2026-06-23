@@ -2,6 +2,7 @@
 
 import { createServerClient } from '@/lib/supabase';
 import { Visita, ResponsavelTecnico } from '@/types/database.types';
+import { cookies } from 'next/headers';
 
 export interface DesempenhoTecnico {
   tecnicoId: string;
@@ -27,6 +28,36 @@ export interface RelatorioEficiencia {
 export async function getTecnicosEficiencia(): Promise<RelatorioEficiencia> {
   const supabase = createServerClient();
 
+  // Obter o token do usuário logado e buscar seu empresa_id
+  const cookieStore = await cookies();
+  const token = cookieStore.get('sb-access-token')?.value;
+  if (!token) {
+    throw new Error('Não autorizado: Sessão ausente.');
+  }
+
+  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !user) {
+    throw new Error('Não autorizado: Sessão inválida.');
+  }
+
+  const { data: perfil, error: perfilError } = await supabase
+    .from('perfis_usuarios')
+    .select('role, empresa_id, status_acesso')
+    .eq('id', user.id)
+    .single();
+
+  if (perfilError || !perfil) {
+    throw new Error('Erro ao carregar perfil do usuário.');
+  }
+
+  if (perfil.status_acesso === false) {
+    throw new Error('Acesso negado: Seu usuário está bloqueado.');
+  }
+
+  const normalizedRole = (perfil.role || '').toLowerCase();
+  const isSuperAdmin = normalizedRole === 'super_admin';
+  const empresaId = perfil.empresa_id;
+
   // Calcular datas baseadas no fuso horário de Brasília
   const now = new Date();
   const formatTZ = (d: Date) => {
@@ -48,19 +79,31 @@ export async function getTecnicosEficiencia(): Promise<RelatorioEficiencia> {
 
   try {
     // 1. Buscar todos os técnicos
-    const { data: dbTecnicos, error: tecError } = await supabase
+    let tecQuery = supabase
       .from('responsaveis_tecnicos')
       .select('*')
       .order('nome', { ascending: true });
 
+    if (!isSuperAdmin) {
+      tecQuery = tecQuery.eq('empresa_id', empresaId);
+    }
+
+    const { data: dbTecnicos, error: tecError } = await tecQuery;
+
     if (tecError) throw new Error(tecError.message);
 
     // 2. Buscar todas as visitas do período (últimos 7 dias)
-    const { data: dbVisits, error: visitsError } = await supabase
+    let visitsQuery = supabase
       .from('visits')
       .select('*')
       .gte('data_visita', seteDiasAtrasStr)
       .lte('data_visita', hojeStr);
+
+    if (!isSuperAdmin) {
+      visitsQuery = visitsQuery.eq('empresa_id', empresaId);
+    }
+
+    const { data: dbVisits, error: visitsError } = await visitsQuery;
 
     if (visitsError) throw new Error(visitsError.message);
 
