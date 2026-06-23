@@ -180,25 +180,19 @@ export default function VisitaCard({
             </div>
           )}
 
-          <div className="flex flex-wrap gap-2 mt-1">
-            {tecnicoNome && (
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm" title="Técnico Responsável">
-                  {tecnicoNome.charAt(0)}
-                </div>
-                <span className="text-xs font-bold text-orange-700 bg-orange-50/80 border border-orange-100 px-2 py-0.5 rounded-md break-words">
-                  {tecnicoNome}
-                </span>
-              </div>
-            )}
+          <div className="space-y-1.5 mt-2">
+            <p className="text-xs text-gray-700 flex items-center gap-1 leading-none">
+              <span className="font-semibold text-gray-500">Instalador:</span>
+              <span className="font-bold text-gray-800">"{tecnicoNome || 'A definir'}"</span>
+            </p>
 
             {visita.agendado_por && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 mt-1">
                 <div className="w-5 h-5 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm" title="Quem marcou a visita">
                   {visita.agendado_por.charAt(0).toUpperCase()}
                 </div>
-                <span className="text-xs font-bold text-indigo-700 bg-indigo-50/80 border border-indigo-100 px-2 py-0.5 rounded-md break-words">
-                  Agendado por: {visita.agendado_por}
+                <span className="text-[11px] font-bold text-indigo-700 bg-indigo-50/80 border border-indigo-100 px-2 py-0.5 rounded-md break-words leading-none">
+                  Agendado por: "{visita.agendado_por}"
                 </span>
               </div>
             )}
