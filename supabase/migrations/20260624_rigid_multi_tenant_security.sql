@@ -108,6 +108,11 @@ DROP POLICY IF EXISTS "Tecnicos podem atualizar suas visitas" ON public.visits;
 DROP POLICY IF EXISTS "Técnicos podem ver suas próprias visitas" ON public.visits;
 DROP POLICY IF EXISTS "Técnicos podem atualizar suas próprias visitas" ON public.visits;
 DROP POLICY IF EXISTS "Administradores têm permissão total em visits" ON public.visits;
+DROP POLICY IF EXISTS "Super admin can do all on visits" ON public.visits;
+DROP POLICY IF EXISTS "Admins e Mestres total access within company" ON public.visits;
+DROP POLICY IF EXISTS "Tecnicos e Instaladores can view their assigned visits within company" ON public.visits;
+DROP POLICY IF EXISTS "Tecnicos e Instaladores can update their assigned visits within company" ON public.visits;
+
 
 -- Super Admin
 CREATE POLICY "Super admin can do all on visits" ON public.visits
@@ -157,6 +162,10 @@ ALTER TABLE public.responsaveis_tecnicos ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Qualquer usuário autenticado pode ver responsaveis_tecnicos" ON public.responsaveis_tecnicos;
 DROP POLICY IF EXISTS "Apenas administradores podem gerenciar responsaveis_tecnicos" ON public.responsaveis_tecnicos;
 DROP POLICY IF EXISTS "Responsaveis tecnicos multi-tenant policy" ON public.responsaveis_tecnicos;
+DROP POLICY IF EXISTS "Super admin can do all on responsaveis_tecnicos" ON public.responsaveis_tecnicos;
+DROP POLICY IF EXISTS "Users can view responsaveis_tecnicos of their own company" ON public.responsaveis_tecnicos;
+DROP POLICY IF EXISTS "Admins can manage responsaveis_tecnicos of their own company" ON public.responsaveis_tecnicos;
+
 
 CREATE POLICY "Super admin can do all on responsaveis_tecnicos" ON public.responsaveis_tecnicos
   FOR ALL TO authenticated USING (public.is_super_admin()) WITH CHECK (public.is_super_admin());
@@ -197,6 +206,10 @@ ALTER TABLE public.perfis_usuarios ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Perfis usuarios multi-tenant policy" ON public.perfis_usuarios;
 DROP POLICY IF EXISTS "Administradores podem gerenciar todos os perfis" ON public.perfis_usuarios;
 DROP POLICY IF EXISTS "Usuários podem ver seu próprio perfil" ON public.perfis_usuarios;
+DROP POLICY IF EXISTS "Perfis usuarios select policy" ON public.perfis_usuarios;
+DROP POLICY IF EXISTS "Perfis usuarios insert/delete policy" ON public.perfis_usuarios;
+DROP POLICY IF EXISTS "Perfis usuarios update policy" ON public.perfis_usuarios;
+
 
 -- SELECT
 CREATE POLICY "Perfis usuarios select policy" ON public.perfis_usuarios
