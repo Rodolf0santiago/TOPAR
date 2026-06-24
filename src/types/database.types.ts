@@ -106,3 +106,29 @@ export interface Empresa {
   assinatura_mp_id?: string | null;
   criado_em: string;
 }
+
+/**
+ * Representa um vínculo N:N entre um usuário e uma empresa.
+ * Tabela: empresa_membros
+ */
+export interface EmpresaMembro {
+  id: string;
+  user_id: string;
+  empresa_id: string;
+  role: 'admin' | 'instalador' | 'tecnico' | 'mestre' | 'vendedor';
+  status_acesso: boolean;
+  criado_em: string;
+}
+
+/**
+ * Projeção usada na tela de seleção de empresa (JOIN empresa_membros + empresas).
+ * Retornada pela função SQL get_user_empresas().
+ */
+export interface MinhaEmpresa {
+  empresa_id: string;
+  nome_fantasia: string;
+  role: 'admin' | 'instalador' | 'tecnico' | 'mestre' | 'vendedor';
+  status_acesso: boolean;
+  status_assinatura: string;
+}
+

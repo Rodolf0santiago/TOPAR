@@ -124,7 +124,7 @@ export async function criarEmpresaECliente(dados: CriarEmpresaEClienteParams) {
       return { success: false, error: 'Erro ao gerar o ID de usuário no Supabase.' };
     }
 
-    // 4. Garantir que o perfil correspondente foi criado no banco
+    // 4. Garantir que o perfil global foi criado em perfis_usuarios
     const { data: perfilExistente } = await supabaseAdmin
       .from('perfis_usuarios')
       .select('id')
@@ -146,7 +146,6 @@ export async function criarEmpresaECliente(dados: CriarEmpresaEClienteParams) {
 
       if (profileError) {
         console.error('Erro ao criar perfil mestre:', profileError);
-        // Tenta remover o usuário do Auth para consistência
         await supabaseAdmin.auth.admin.deleteUser(novoUserId);
         await supabaseAdmin.from('empresas').delete().eq('id', novaEmpresa.id);
         return { success: false, error: 'Erro ao criar o perfil do usuário responsável.' };
@@ -163,6 +162,22 @@ export async function criarEmpresaECliente(dados: CriarEmpresaEClienteParams) {
           senha_temp: senhaDefinida
         })
         .eq('id', novoUserId);
+    }
+
+    // 5. Criar (ou garantir) o vínculo em empresa_membros (N:N)
+    //    O trigger handle_new_user já deve ter criado, mas garantimos aqui por segurança.
+    const { error: membroError } = await supabaseAdmin
+      .from('empresa_membros')
+      .upsert({
+        user_id:      novoUserId,
+        empresa_id:   novaEmpresa.id,
+        role:         'mestre',
+        status_acesso: true,
+      }, { onConflict: 'user_id,empresa_id' });
+
+    if (membroError) {
+      console.warn('[criarEmpresaECliente] Aviso: erro ao criar empresa_membros:', membroError.message);
+      // Não é fatal — o trigger já pode ter criado
     }
 
     return {
@@ -423,7 +438,12 @@ export async function salvarFaturamentoCustomizado(
 }
 
 /**
- * Exclui permanentemente uma empresa, todos os seus dados e todas as contas de usuários associadas.
+ * Exclui permanentemente uma empresa com DEEP CLEANSE completo:
+ *   1. Apaga todos os arquivos físicos do Supabase Storage (PDFs, imagens)
+ *   2. Apaga usuários do auth.users respeitando N:N:
+ *      - Se o usuário pertence APENAS a esta empresa → deleta do Auth
+ *      - Se pertence a outras empresas também → apenas remove o vínculo (cascade)
+ *   3. Deleta a empresa → cascade limpa leads, projetos, visitas, etc.
  */
 export async function excluirEmpresa(empresaId: string) {
   try {
@@ -434,44 +454,120 @@ export async function excluirEmpresa(empresaId: string) {
     const supabaseAdmin = createServerClient();
     await checkSuperAdminPermission(supabaseAdmin);
 
-    // 1. Buscar todos os usuários vinculados a esta empresa
-    const { data: perfis, error: perfisError } = await supabaseAdmin
-      .from('perfis_usuarios')
-      .select('id, email')
-      .eq('empresa_id', empresaId);
+    // ─── PASSO 1: Limpar Supabase Storage ─────────────────────────────────────
+    // Estratégia dupla:
+    //   A) Listar arquivos com prefixo empresa_id/ (estrutura organizada)
+    //   B) Varrer coluna pdf_proposta_url das visits para capturar paths avulsos
 
-    if (perfisError) {
-      console.error('Erro ao buscar usuários da empresa para exclusão:', perfisError);
-      return { success: false, error: 'Erro ao buscar usuários associados para exclusão.' };
+    const BUCKET = 'documentos_crm';
+
+    // 1A. Listagem por prefixo (path: empresa_id/...)
+    try {
+      const { data: storageFiles } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .list(empresaId, { limit: 1000, sortBy: { column: 'name', order: 'asc' } });
+
+      if (storageFiles && storageFiles.length > 0) {
+        const filePaths = storageFiles.map((f) => `${empresaId}/${f.name}`);
+        const { error: removeError } = await supabaseAdmin.storage
+          .from(BUCKET)
+          .remove(filePaths);
+        if (removeError) {
+          console.warn(`[Deep Cleanse] Aviso ao remover arquivos do Storage (prefixo):`, removeError.message);
+        } else {
+          console.log(`[Deep Cleanse] ${filePaths.length} arquivo(s) removido(s) do Storage (prefixo).`);
+        }
+      }
+    } catch (storageErr: any) {
+      console.warn('[Deep Cleanse] Aviso na listagem do Storage por prefixo:', storageErr.message);
     }
 
-    // 2. Deletar cada usuário do Supabase Auth (isso vai deletar os perfis por cascade)
-    if (perfis && perfis.length > 0) {
-      for (const perfil of perfis) {
-        console.log(`[SuperAdmin Excluir] Removendo usuário Auth: ${perfil.email} (${perfil.id})`);
-        const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(perfil.id);
-        if (authDeleteError) {
-          console.error(`Erro ao deletar usuário ${perfil.email} no Auth:`, authDeleteError);
-          // Continuamos tentando deletar os outros mesmo se um falhar
+    // 1B. Varrer pdf_proposta_url nas visitas desta empresa para capturar paths avulsos
+    try {
+      const { data: visitsWithPdf } = await supabaseAdmin
+        .from('visits')
+        .select('pdf_proposta_url')
+        .eq('empresa_id', empresaId)
+        .not('pdf_proposta_url', 'is', null);
+
+      if (visitsWithPdf && visitsWithPdf.length > 0) {
+        // Extrair o path relativo a partir da URL pública do Supabase
+        // Formato: .../storage/v1/object/public/documentos_crm/{path}
+        const avulsePaths: string[] = visitsWithPdf
+          .map((v) => {
+            const url: string = v.pdf_proposta_url || '';
+            const marker = `/object/public/${BUCKET}/`;
+            const idx = url.indexOf(marker);
+            return idx !== -1 ? decodeURIComponent(url.substring(idx + marker.length)) : null;
+          })
+          .filter((p): p is string => !!p && !p.startsWith(`${empresaId}/`)); // apenas os avulsos
+
+        if (avulsePaths.length > 0) {
+          const { error: avulseErr } = await supabaseAdmin.storage
+            .from(BUCKET)
+            .remove(avulsePaths);
+          if (avulseErr) {
+            console.warn('[Deep Cleanse] Aviso ao remover arquivos avulsos:', avulseErr.message);
+          } else {
+            console.log(`[Deep Cleanse] ${avulsePaths.length} arquivo(s) avulso(s) removido(s).`);
+          }
+        }
+      }
+    } catch (pdfErr: any) {
+      console.warn('[Deep Cleanse] Aviso ao varrer pdf_proposta_url:', pdfErr.message);
+    }
+
+    // ─── PASSO 2: Coletar membros via empresa_membros (N:N) ───────────────────
+    const { data: membros, error: membrosError } = await supabaseAdmin
+      .from('empresa_membros')
+      .select('user_id')
+      .eq('empresa_id', empresaId);
+
+    if (membrosError) {
+      console.error('[Deep Cleanse] Erro ao buscar membros:', membrosError);
+      return { success: false, error: 'Erro ao buscar membros da empresa para exclusão.' };
+    }
+
+    // ─── PASSO 3: Deletar usuários do Auth (somente os exclusivos desta empresa) ─
+    if (membros && membros.length > 0) {
+      for (const membro of membros) {
+        // Verificar quantas empresas este usuário possui no total
+        const { count: totalEmpresas } = await supabaseAdmin
+          .from('empresa_membros')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', membro.user_id);
+
+        if ((totalEmpresas ?? 0) <= 1) {
+          // Usuário EXCLUSIVO desta empresa → deletar do Auth (cascade remove perfis_usuarios + empresa_membros)
+          console.log(`[Deep Cleanse] Deletando usuário exclusivo do Auth: ${membro.user_id}`);
+          const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(membro.user_id);
+          if (authDeleteError) {
+            console.error(`[Deep Cleanse] Erro ao deletar usuário ${membro.user_id} do Auth:`, authDeleteError.message);
+          }
+        } else {
+          // Usuário COMPARTILHADO (pertence a outras empresas também)
+          // O ON DELETE CASCADE da empresa_membros removerá apenas o vínculo com esta empresa.
+          // O usuário continuará existindo nas outras empresas.
+          console.log(`[Deep Cleanse] Usuário ${membro.user_id} pertence a outras empresas — apenas vínculo removido.`);
         }
       }
     }
 
-    // 3. Deletar a empresa (isso deleta leads, projetos, visitas, etc. por cascade)
+    // ─── PASSO 4: Deletar a empresa (cascade limpa todos os dados do banco) ────
     const { error: empresaDeleteError } = await supabaseAdmin
       .from('empresas')
       .delete()
       .eq('id', empresaId);
 
     if (empresaDeleteError) {
-      console.error('Erro ao deletar empresa do banco:', empresaDeleteError);
-      return { success: false, error: `Erro ao deletar empresa do banco: ${empresaDeleteError.message}` };
+      console.error('[Deep Cleanse] Erro ao deletar empresa:', empresaDeleteError);
+      return { success: false, error: `Erro ao deletar empresa: ${empresaDeleteError.message}` };
     }
 
-    console.log(`[SuperAdmin Excluir] Empresa ${empresaId} excluída com sucesso.`);
+    console.log(`[Deep Cleanse] ✅ Empresa ${empresaId} e todos os seus dados foram eliminados com sucesso.`);
     return { success: true };
   } catch (err: any) {
-    console.error('Erro no excluirEmpresa:', err);
+    console.error('[Deep Cleanse] Erro inesperado no excluirEmpresa:', err);
     return { success: false, error: err.message || 'Erro inesperado ao excluir empresa.' };
   }
 }

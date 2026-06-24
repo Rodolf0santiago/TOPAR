@@ -18,25 +18,57 @@ async function checkAdminPermission(supabaseAdmin: ReturnType<typeof createServe
     throw new Error('Não autorizado: Sessão inválida.');
   }
 
-  const { data: profile, error: profileError } = await supabaseAdmin
-    .from('perfis_usuarios')
-    .select('id, role, status_acesso, empresa_id')
-    .eq('id', user.id)
-    .single();
+  // 1. Ler empresa_id ativa do JWT (injetada pelo Server Action selecionarEmpresa)
+  const jwtEmpresaId = user.user_metadata?.empresa_id as string | undefined;
+  const jwtRole     = user.user_metadata?.role as string | undefined;
 
-  if (profileError || !profile) {
-    throw new Error('Erro ao validar permissões do usuário.');
+  // 2. Verificar role via empresa_membros (fonte de verdade) se houver empresa_id no JWT
+  let profileRole: string | null = jwtRole || null;
+  let profileEmpresaId: string | null = jwtEmpresaId || null;
+  let profileStatusAcesso: boolean = true;
+
+  if (jwtEmpresaId) {
+    const { data: membro } = await supabaseAdmin
+      .from('empresa_membros')
+      .select('role, status_acesso')
+      .eq('user_id', user.id)
+      .eq('empresa_id', jwtEmpresaId)
+      .maybeSingle();
+
+    if (membro) {
+      profileRole         = membro.role;
+      profileStatusAcesso = membro.status_acesso;
+    }
+  } else {
+    // Fallback: usar perfis_usuarios (compatibilidade com sessões antigas sem empresa_id no JWT)
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('perfis_usuarios')
+      .select('id, role, status_acesso, empresa_id')
+      .eq('id', user.id)
+      .single();
+
+    if (profileError || !profile) {
+      throw new Error('Erro ao validar permissões do usuário.');
+    }
+    profileRole         = profile.role;
+    profileEmpresaId    = profile.empresa_id;
+    profileStatusAcesso = profile.status_acesso;
   }
 
-  if (profile.role !== 'admin' && profile.role !== 'mestre' && profile.role !== 'super_admin') {
+  if (!profileRole || (profileRole !== 'admin' && profileRole !== 'mestre' && profileRole !== 'super_admin')) {
     throw new Error('Acesso negado: Permissão restrita a administradores.');
   }
 
-  if (profile.status_acesso === false) {
+  if (profileStatusAcesso === false) {
     throw new Error('Acesso negado: Seu usuário está bloqueado.');
   }
 
-  return profile;
+  return {
+    id:           user.id,
+    role:         profileRole,
+    empresa_id:   profileEmpresaId,
+    status_acesso: profileStatusAcesso,
+  };
 }
 
 /**
@@ -366,7 +398,60 @@ export async function criarUsuarioCompleto(dados: {
 
     if (createAuthError) {
       console.error('Erro ao criar usuário no Supabase Auth Admin:', createAuthError);
-      if (createAuthError.message.includes('already exists') || createAuthError.status === 422) {
+      // Verificar se o e-mail já existe globalmente no Auth
+      if (createAuthError.message.includes('already been registered') ||
+          createAuthError.message.includes('already exists') ||
+          createAuthError.status === 422) {
+        // ── CASO: e-mail já existe em outra empresa ──────────────────────────
+        // Buscar o user_id existente pelo e-mail
+        const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+        const existingUser = existingUsers?.users?.find(
+          (u) => u.email?.toLowerCase() === emailFormatado
+        );
+
+        if (existingUser) {
+          // Verificar se já é membro desta empresa
+          const { data: membroExistente } = await supabaseAdmin
+            .from('empresa_membros')
+            .select('user_id')
+            .eq('user_id', existingUser.id)
+            .eq('empresa_id', empresaId)
+            .maybeSingle();
+
+          if (membroExistente) {
+            return { success: false, error: 'Este e-mail já pertence a esta empresa.' };
+          }
+
+          // Adicionar vínculo na empresa_membros (sem criar novo usuário no Auth)
+          const { error: membroErr } = await supabaseAdmin
+            .from('empresa_membros')
+            .insert({
+              user_id:       existingUser.id,
+              empresa_id:    empresaId,
+              role:          dados.role,
+              status_acesso: statusAcesso,
+            });
+
+          if (membroErr) {
+            return { success: false, error: 'Erro ao vincular usuário existente a esta empresa: ' + membroErr.message };
+          }
+
+          // Buscar o perfil existente para retornar
+          const { data: perfilExistente } = await supabaseAdmin
+            .from('perfis_usuarios')
+            .select('*')
+            .eq('id', existingUser.id)
+            .single();
+
+          return {
+            success: true,
+            data: {
+              ...(perfilExistente || {}),
+              role: dados.role,
+            } as PerfilUsuario,
+          };
+        }
+
         return { success: false, error: 'Este e-mail já está cadastrado no sistema.' };
       }
       return { success: false, error: createAuthError.message || 'Erro ao criar conta de acesso.' };
@@ -460,7 +545,7 @@ export async function criarUsuarioCompleto(dados: {
       }
     }
 
-    // 5. Se for técnico/instalador, e houver telefone, inserir também na tabela 'responsaveis_tecnicos'
+    // 5. Se for técnico/instalador, inserir também na tabela 'responsaveis_tecnicos'
     if (dados.role === 'tecnico' || dados.role === 'instalador') {
       const { error: rtError } = await supabaseAdmin
         .from('responsaveis_tecnicos')
@@ -476,6 +561,17 @@ export async function criarUsuarioCompleto(dados: {
         console.error('Erro ao inserir em responsaveis_tecnicos:', rtError);
       }
     }
+
+    // 6. Garantir vínculo em empresa_membros (N:N)
+    //    O trigger handle_new_user já deve ter inserido, mas garantimos aqui.
+    await supabaseAdmin
+      .from('empresa_membros')
+      .upsert({
+        user_id:       novoId,
+        empresa_id:    empresaId,
+        role:          dados.role,
+        status_acesso: statusAcesso,
+      }, { onConflict: 'user_id,empresa_id' });
 
     // 6. Inserir/Atualizar na tabela legado 'perfis' se ela existir no banco
     try {

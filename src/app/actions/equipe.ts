@@ -37,27 +37,53 @@ async function validarAcessoAdmin(supabaseAdmin: ReturnType<typeof createServerC
     throw new Error('Não autorizado: Sessão inválida.');
   }
 
-  // Obter o perfil completo do usuário a partir do banco de dados (tabela perfis_usuarios)
-  const { data: perfilUsuario, error: perfilError } = await supabaseAdmin
-    .from('perfis_usuarios')
-    .select('role, empresa_id, status_acesso')
-    .eq('id', user.id)
-    .single();
+  // 1. Ler empresa_id ativa do JWT (injetada pelo selecionarEmpresa)
+  const jwtEmpresaId = user.user_metadata?.empresa_id as string | undefined;
+  const jwtRole     = user.user_metadata?.role as string | undefined;
 
-  if (perfilError || !perfilUsuario) {
-    throw new Error('Acesso negado: Perfil de usuário não encontrado.');
+  let profileRole: string | null = jwtRole || null;
+  let profileEmpresaId: string | null = jwtEmpresaId || null;
+  let profileStatusAcesso: boolean = true;
+
+  if (jwtEmpresaId) {
+    // 2. Confirmar role/status via empresa_membros (fonte de verdade para N:N)
+    const { data: membro } = await supabaseAdmin
+      .from('empresa_membros')
+      .select('role, status_acesso')
+      .eq('user_id', user.id)
+      .eq('empresa_id', jwtEmpresaId)
+      .maybeSingle();
+
+    if (membro) {
+      profileRole         = membro.role;
+      profileStatusAcesso = membro.status_acesso;
+    }
+  } else {
+    // 3. Fallback: perfis_usuarios (compatibilidade com sessões legadas)
+    const { data: perfilUsuario, error: perfilError } = await supabaseAdmin
+      .from('perfis_usuarios')
+      .select('role, empresa_id, status_acesso')
+      .eq('id', user.id)
+      .single();
+
+    if (perfilError || !perfilUsuario) {
+      throw new Error('Acesso negado: Perfil de usuário não encontrado.');
+    }
+    profileRole         = perfilUsuario.role;
+    profileEmpresaId    = perfilUsuario.empresa_id;
+    profileStatusAcesso = perfilUsuario.status_acesso;
   }
 
-  if (perfilUsuario.status_acesso === false) {
+  if (profileStatusAcesso === false) {
     throw new Error('Acesso negado: Seu usuário está bloqueado.');
   }
 
-  const normalizedRole = (perfilUsuario.role || '').toLowerCase();
+  const normalizedRole = (profileRole || '').toLowerCase();
   if (normalizedRole !== 'admin' && normalizedRole !== 'mestre' && normalizedRole !== 'super_admin') {
     throw new Error('Acesso negado: Permissão restrita a administradores e mestres.');
   }
 
-  return { user, empresa_id: perfilUsuario.empresa_id };
+  return { user, empresa_id: profileEmpresaId };
 }
 
 /**
@@ -109,9 +135,63 @@ export async function criarMembroEquipe(dados: CriarMembroEquipeDados): Promise<
 
   if (inviteError) {
     console.error('Erro ao criar convite de usuário no Auth:', inviteError);
-    if (inviteError.message.includes('already exists') || inviteError.status === 422) {
-      throw new Error('Este e-mail já está cadastrado no sistema.');
+
+    // ── CASO N:N: e-mail já existe globalmente em outra empresa ──────────────
+    if (inviteError.message.includes('already exists') || (inviteError as any).status === 422) {
+      // Buscar o user_id existente pelo e-mail
+      const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers();
+      const existingUser = existingUsers?.users?.find(
+        (u) => u.email?.toLowerCase() === emailFormatado
+      );
+
+      if (existingUser) {
+        // Verificar se já é membro desta empresa
+        const { data: membroExistente } = await supabaseAdmin
+          .from('empresa_membros')
+          .select('user_id')
+          .eq('user_id', existingUser.id)
+          .eq('empresa_id', empresaId)
+          .maybeSingle();
+
+        if (membroExistente) {
+          throw new Error('Este e-mail já pertence a esta empresa.');
+        }
+
+        // Criar apenas o vínculo N:N — sem duplicar no Auth
+        const { error: membroErr } = await supabaseAdmin
+          .from('empresa_membros')
+          .insert({
+            user_id:       existingUser.id,
+            empresa_id:    empresaId,
+            role:          roleFormatada,
+            status_acesso: true,
+          });
+
+        if (membroErr) {
+          throw new Error('Erro ao vincular usuário existente a esta empresa: ' + membroErr.message);
+        }
+
+        // Buscar o perfil existente para retornar ao chamador
+        const { data: perfilExistente } = await supabaseAdmin
+          .from('perfis_usuarios')
+          .select('nome_completo, email, created_at')
+          .eq('id', existingUser.id)
+          .single();
+
+        return {
+          id:           existingUser.id,
+          nome_completo: perfilExistente?.nome_completo || existingUser.email || '',
+          email:         existingUser.email || emailFormatado,
+          telefone:      telefoneFormatado,
+          role:          roleFormatada,
+          status_acesso: true,
+          created_at:    perfilExistente?.created_at || new Date().toISOString(),
+        } as MembroEquipe;
+      }
+
+      throw new Error('Este e-mail já está cadastrado e não pôde ser localizado.');
     }
+
     throw new Error(inviteError.message || 'Erro ao criar conta de acesso.');
   }
 
@@ -210,6 +290,17 @@ export async function criarMembroEquipe(dados: CriarMembroEquipeDados): Promise<
       console.error('Erro ao inserir em responsaveis_tecnicos no criarMembroEquipe:', rtError);
     }
   }
+
+  // 7. Garantir vínculo em empresa_membros (N:N)
+  //    O trigger handle_new_user já deve ter inserido, mas garantimos aqui.
+  await supabaseAdmin
+    .from('empresa_membros')
+    .upsert({
+      user_id:       novoId,
+      empresa_id:    empresaId,
+      role:          roleFormatada,
+      status_acesso: true,
+    }, { onConflict: 'user_id,empresa_id' });
 
   return resultadoSalvo as MembroEquipe;
 }

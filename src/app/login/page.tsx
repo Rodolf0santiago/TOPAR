@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
+import { getMinhasEmpresas, selecionarEmpresa } from '@/app/actions/empresa';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -10,10 +11,12 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [statusMsg, setStatusMsg] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    setStatusMsg('Autenticando...');
     setLoading(true);
 
     try {
@@ -25,63 +28,75 @@ export default function LoginPage() {
       if (error) throw error;
 
       if (data.session) {
-        // Define o cookie para sincronizar com o Middleware/Proxy do Next.js
+        // Sincroniza o cookie de sessão com o Middleware/Proxy do Next.js
         document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=604800; SameSite=Lax; Secure`;
 
-        // 1. Descobrir a role do usuário (consultando perfis e perfis_usuarios como fallback)
-        const userId = data.session.user.id;
-        let userRole = data.session.user.user_metadata?.role || '';
+        const jwtRole = data.session.user.user_metadata?.role || '';
 
-        if (!userRole) {
-          // Consulta a tabela 'perfis'
-          const { data: perfil, error: errPerfil } = await supabase
-            .from('perfis')
-            .select('role')
-            .eq('id', userId)
-            .single();
+        // ── Super Admin: vai direto para o painel, sem precisar selecionar empresa
+        if (jwtRole === 'super_admin') {
+          router.push('/superadmin');
+          router.refresh();
+          return;
+        }
 
-          if (!errPerfil && perfil?.role) {
-            userRole = perfil.role;
-          } else {
-            // Fallback para 'perfis_usuarios'
-            const { data: perfilUsuario, error: errPerfilUsuario } = await supabase
-              .from('perfis_usuarios')
-              .select('role')
-              .eq('id', userId)
-              .single();
+        // ── Verificar quantas empresas o usuário pertence (N:N via empresa_membros)
+        setStatusMsg('Verificando empresas...');
+        const empresasRes = await getMinhasEmpresas();
 
-            if (!errPerfilUsuario && perfilUsuario?.role) {
-              userRole = perfilUsuario.role;
-            }
+        if (!empresasRes.success || !empresasRes.data) {
+          // Fallback: se não conseguir usar empresa_membros, usar fluxo legado por role do JWT
+          const roleNorm = jwtRole.toLowerCase();
+          const fallbackRoute =
+            roleNorm === 'mestre' || roleNorm === 'admin' ? '/dashboard/mestre' :
+            roleNorm === 'vendedor' || roleNorm === 'tecnico' ? '/dashboard/vendedor' :
+            '/dashboard/instalador';
+          router.push(fallbackRoute);
+          router.refresh();
+          return;
+        }
+
+        const minhasEmpresas = empresasRes.data;
+
+        if (minhasEmpresas.length === 0) {
+          throw new Error('Sua conta não está associada a nenhuma empresa. Contacte o administrador.');
+        }
+
+        if (minhasEmpresas.length === 1) {
+          // Apenas 1 empresa → selecionar automaticamente e ir ao dashboard
+          setStatusMsg('Entrando no painel...');
+          const selRes = await selecionarEmpresa(minhasEmpresas[0].empresa_id);
+          if (!selRes.success) {
+            throw new Error(selRes.error || 'Erro ao ativar empresa.');
           }
+
+          // Forçar refresh do JWT para incluir empresa_id + role atualizados nas claims
+          await supabase.auth.refreshSession();
+
+          const role = minhasEmpresas[0].role;
+          const targetRoute =
+            role === 'mestre' || role === 'admin' ? '/dashboard/mestre' :
+            role === 'vendedor' || role === 'tecnico' ? '/dashboard/vendedor' :
+            '/dashboard/instalador';
+
+          router.push(targetRoute);
+          router.refresh();
+        } else {
+          // N empresas → redirecionar para tela de seleção de empresa
+          router.push('/selecionar-empresa');
+          router.refresh();
         }
-
-        // 2. Roteamento baseado em funções
-        let targetRoute = '/dashboard/instalador';
-        const normalizedRole = userRole.toLowerCase();
-
-        if (normalizedRole === 'super_admin') {
-          targetRoute = '/superadmin';
-        } else if (normalizedRole === 'mestre' || normalizedRole === 'admin') {
-          targetRoute = '/dashboard/mestre';
-        } else if (normalizedRole === 'vendedor' || normalizedRole === 'tecnico') {
-          targetRoute = '/dashboard/vendedor';
-        } else if (normalizedRole === 'instalador') {
-          targetRoute = '/dashboard/instalador';
-        }
-
-        router.push(targetRoute);
-        router.refresh();
       }
     } catch (err: any) {
       console.error(err);
-      // Tratar o erro {} do Supabase (objeto sem .message ou com mensagem vazia/inválida)
+      setStatusMsg(null);
       const rawMsg = err?.message;
       const isEmptyMsg = !rawMsg || rawMsg === '{}' || rawMsg === 'undefined';
-      const displayMsg = isEmptyMsg
-        ? 'Credenciais inválidas. Verifique o e-mail e a senha e tente novamente.'
-        : rawMsg;
-      setErrorMsg(displayMsg);
+      setErrorMsg(
+        isEmptyMsg
+          ? 'Credenciais inválidas. Verifique o e-mail e a senha e tente novamente.'
+          : rawMsg
+      );
     } finally {
       setLoading(false);
     }
@@ -91,11 +106,11 @@ export default function LoginPage() {
     <div className="min-h-screen bg-[#FCFBFA] text-[#0B0F19] flex items-center justify-center p-6 selection:bg-[#0a4ee4] selection:text-white font-sans relative overflow-hidden">
       {/* Gradients de Fundo */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(10,78,228,0.04)_0%,transparent_65%)] pointer-events-none" />
-      
+
       <div className="max-w-md w-full bg-white border border-gray-200/80 rounded-3xl p-8 shadow-xl backdrop-blur-sm relative overflow-hidden">
         {/* Indicador de marca superior */}
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#0a4ee4] to-amber-500" />
-        
+
         {/* Cabeçalho */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
@@ -111,6 +126,17 @@ export default function LoginPage() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {/* Feedback de status durante o processo de login */}
+        {loading && statusMsg && (
+          <div className="mb-6 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-600 text-xs font-semibold flex items-center gap-2">
+            <svg className="animate-spin h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            <span>{statusMsg}</span>
           </div>
         )}
 
@@ -150,7 +176,7 @@ export default function LoginPage() {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
                 </svg>
-                <span>Validando credenciais...</span>
+                <span>{statusMsg || 'Processando...'}</span>
               </>
             ) : (
               <span>Entrar no CRM</span>
