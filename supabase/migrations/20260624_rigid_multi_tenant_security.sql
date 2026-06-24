@@ -16,8 +16,8 @@ BEGIN
     RETURN _empresa_id::uuid;
   END IF;
 
-  -- 2. Fallback para query na tabela perfis_usuarios
-  RETURN (SELECT empresa_id FROM public.perfis_usuarios WHERE id = auth.uid());
+  -- 2. Fallback: Buscar da tabela auth.users (evita loops de recursão com perfis_usuarios)
+  RETURN (SELECT (raw_user_meta_data ->> 'empresa_id')::uuid FROM auth.users WHERE id = auth.uid());
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
@@ -32,8 +32,8 @@ BEGIN
     RETURN _role = 'super_admin';
   END IF;
 
-  -- 2. Fallback
-  RETURN COALESCE((SELECT role = 'super_admin' FROM public.perfis_usuarios WHERE id = auth.uid()), false);
+  -- 2. Fallback: Buscar da tabela auth.users (evita loops de recursão com perfis_usuarios)
+  RETURN COALESCE((SELECT (raw_user_meta_data ->> 'role') = 'super_admin' FROM auth.users WHERE id = auth.uid()), false);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE;
 
@@ -216,10 +216,10 @@ CREATE POLICY "Perfis usuarios select policy" ON public.perfis_usuarios
   FOR SELECT TO authenticated
   USING (public.is_super_admin() OR empresa_id = public.get_my_empresa_id() OR id = auth.uid());
 
--- INSERT/DELETE (Admins)
-CREATE POLICY "Perfis usuarios insert/delete policy" ON public.perfis_usuarios
-  FOR ALL TO authenticated
-  USING (
+-- INSERT (Admins)
+CREATE POLICY "Perfis usuarios insert policy" ON public.perfis_usuarios
+  FOR INSERT TO authenticated
+  WITH CHECK (
     public.is_super_admin() 
     OR (
       empresa_id = public.get_my_empresa_id() 
@@ -232,8 +232,12 @@ CREATE POLICY "Perfis usuarios insert/delete policy" ON public.perfis_usuarios
         )
       )
     )
-  )
-  WITH CHECK (
+  );
+
+-- DELETE (Admins)
+CREATE POLICY "Perfis usuarios delete policy" ON public.perfis_usuarios
+  FOR DELETE TO authenticated
+  USING (
     public.is_super_admin() 
     OR (
       empresa_id = public.get_my_empresa_id() 

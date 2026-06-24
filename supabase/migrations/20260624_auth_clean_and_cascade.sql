@@ -1,5 +1,5 @@
--- OKKA Platform - Migration: Auto-sync perfis_usuarios with responsaveis_tecnicos & RLS Recursion Fix
--- Execute este script no SQL Editor do seu projeto Supabase para aplicar a correção de recursão infinita e sincronização.
+-- OKKA Platform - Migration: Auth User Cleanup on Profile Delete, Empresa Cascade Delete & RLS Recursion Fix
+-- Execute este script no SQL Editor do seu projeto Supabase.
 
 -- =========================================================================
 -- 1. CORREÇÃO DE RECURSÃO INFINITA (Redefinição das funções de auxílio RLS)
@@ -85,66 +85,80 @@ CREATE POLICY "Perfis usuarios delete policy" ON public.perfis_usuarios
   );
 
 -- =========================================================================
--- 3. GARANTIR A EMPRESA PADRÃO
--- =========================================================================
-INSERT INTO public.empresas (id, nome_fantasia, cnpj, status_assinatura)
-VALUES ('00000000-0000-0000-0000-000000000000', 'Empresa Padrão', '00000000000000', 'ativa')
-ON CONFLICT (id) DO NOTHING;
-
--- =========================================================================
--- 4. CRIAR A FUNÇÃO E TRIGGER DE SINCRONIZAÇÃO DE TÉCNICOS/INSTALADORES
+-- 3. CONFIGURAR ON DELETE CASCADE PARA EMPRESAS
 -- =========================================================================
 
-CREATE OR REPLACE FUNCTION public.sync_technical_responsible()
+-- Tabela perfis_usuarios (alterar de SET NULL para CASCADE)
+ALTER TABLE public.perfis_usuarios
+  DROP CONSTRAINT IF EXISTS perfis_usuarios_empresa_id_fkey,
+  DROP CONSTRAINT IF EXISTS fk_perfis_usuarios_empresa;
+
+ALTER TABLE public.perfis_usuarios
+  ADD CONSTRAINT perfis_usuarios_empresa_id_fkey
+  FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
+  ON DELETE CASCADE;
+
+-- Garantir que as outras tabelas tenham ON DELETE CASCADE
+ALTER TABLE public.leads
+  DROP CONSTRAINT IF EXISTS leads_empresa_id_fkey;
+ALTER TABLE public.leads
+  ADD CONSTRAINT leads_empresa_id_fkey
+  FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
+  ON DELETE CASCADE;
+
+ALTER TABLE public.projects
+  DROP CONSTRAINT IF EXISTS projects_empresa_id_fkey;
+ALTER TABLE public.projects
+  ADD CONSTRAINT projects_empresa_id_fkey
+  FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
+  ON DELETE CASCADE;
+
+ALTER TABLE public.visits
+  DROP CONSTRAINT IF EXISTS visits_empresa_id_fkey;
+ALTER TABLE public.visits
+  ADD CONSTRAINT visits_empresa_id_fkey
+  FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
+  ON DELETE CASCADE;
+
+ALTER TABLE public.responsaveis_tecnicos
+  DROP CONSTRAINT IF EXISTS responsaveis_tecnicos_empresa_id_fkey;
+ALTER TABLE public.responsaveis_tecnicos
+  ADD CONSTRAINT responsaveis_tecnicos_empresa_id_fkey
+  FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
+  ON DELETE CASCADE;
+
+ALTER TABLE public.whatsapp_config
+  DROP CONSTRAINT IF EXISTS whatsapp_config_empresa_id_fkey;
+ALTER TABLE public.whatsapp_config
+  ADD CONSTRAINT whatsapp_config_empresa_id_fkey
+  FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
+  ON DELETE CASCADE;
+
+ALTER TABLE public.materiais_predefinidos
+  DROP CONSTRAINT IF EXISTS materiais_predefinidos_empresa_id_fkey;
+ALTER TABLE public.materiais_predefinidos
+  ADD CONSTRAINT materiais_predefinidos_empresa_id_fkey
+  FOREIGN KEY (empresa_id) REFERENCES public.empresas(id)
+  ON DELETE CASCADE;
+
+-- =========================================================================
+-- 4. CRIAR TRIGGER DE EXCLUSÃO DEFINITIVA NO AUTH.USERS
+-- =========================================================================
+
+CREATE OR REPLACE FUNCTION public.handle_delete_user_profile()
 RETURNS trigger AS $$
 BEGIN
-  -- Se a role do usuário é tecnico ou instalador, garante que ele existe em responsaveis_tecnicos
-  IF NEW.role IN ('tecnico', 'instalador') THEN
-    INSERT INTO public.responsaveis_tecnicos (id, nome, email, telefone, empresa_id)
-    VALUES (
-      NEW.id,
-      NEW.nome_completo,
-      NEW.email,
-      COALESCE(
-        (SELECT (raw_user_meta_data ->> 'telefone') FROM auth.users WHERE id = NEW.id),
-        COALESCE((SELECT telefone FROM public.responsaveis_tecnicos WHERE id = NEW.id), '')
-      ),
-      NEW.empresa_id
-    )
-    ON CONFLICT (id) DO UPDATE SET
-      nome = EXCLUDED.nome,
-      email = EXCLUDED.email,
-      telefone = EXCLUDED.telefone,
-      empresa_id = EXCLUDED.empresa_id;
-  ELSE
-    -- Se a role mudou para outra coisa, remove da tabela de técnicos para não poluir a listagem
-    DELETE FROM public.responsaveis_tecnicos WHERE id = NEW.id;
+  -- Deleta do auth.users caso ainda exista (evitando recursão se o delete partiu do auth)
+  IF EXISTS (SELECT 1 FROM auth.users WHERE id = OLD.id) THEN
+    DELETE FROM auth.users WHERE id = OLD.id;
   END IF;
-  RETURN NEW;
+  RETURN OLD;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Vincular a função ao trigger na tabela perfis_usuarios
-DROP TRIGGER IF EXISTS tr_sync_technical_responsible ON public.perfis_usuarios;
-CREATE TRIGGER tr_sync_technical_responsible
-  AFTER INSERT OR UPDATE OF role, nome_completo, email, empresa_id ON public.perfis_usuarios
+-- Criar a trigger na tabela perfis_usuarios
+DROP TRIGGER IF EXISTS tr_on_profile_deleted ON public.perfis_usuarios;
+CREATE TRIGGER tr_on_profile_deleted
+  AFTER DELETE ON public.perfis_usuarios
   FOR EACH ROW
-  EXECUTE FUNCTION public.sync_technical_responsible();
-
--- =========================================================================
--- 5. SINCRONIZAÇÃO RETROATIVA COM TELEFONES
--- =========================================================================
-INSERT INTO public.responsaveis_tecnicos (id, nome, email, telefone, empresa_id)
-SELECT 
-  p.id, 
-  p.nome_completo, 
-  p.email, 
-  COALESCE((SELECT raw_user_meta_data ->> 'telefone' FROM auth.users WHERE id = p.id), ''), 
-  p.empresa_id 
-FROM public.perfis_usuarios p
-WHERE p.role IN ('tecnico', 'instalador')
-ON CONFLICT (id) DO UPDATE SET
-  nome = EXCLUDED.nome,
-  email = EXCLUDED.email,
-  telefone = EXCLUDED.telefone,
-  empresa_id = EXCLUDED.empresa_id;
+  EXECUTE FUNCTION public.handle_delete_user_profile();
