@@ -133,7 +133,7 @@ export default function AssinaturaPage() {
           <p className="text-sm text-gray-500 leading-relaxed">{error}</p>
           <button
             onClick={loadData}
-            className="w-full py-3 bg-[#0a4ee4] hover:bg-orange-655 text-white font-bold rounded-2xl transition-all shadow-md shadow-orange-500/20 cursor-pointer text-sm"
+            className="w-full py-3 bg-[#0a4ee4] hover:bg-orange-600 text-white font-bold rounded-2xl transition-all shadow-md shadow-orange-500/20 cursor-pointer text-sm"
           >
             Tentar Novamente
           </button>

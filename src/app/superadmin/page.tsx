@@ -1193,7 +1193,7 @@ export default function SuperAdminDashboard() {
                   placeholder="Ex: Construtora Alfa Ltda"
                   value={editCompanyForm.nome_fantasia}
                   onChange={(e) => setEditCompanyForm({...editCompanyForm, nome_fantasia: e.target.value})}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-violet-500 rounded-xl py-2.5 px-4 text-xs outline-none text-slate-200 placeholder:text-slate-655"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-violet-500 rounded-xl py-2.5 px-4 text-xs outline-none text-slate-200 placeholder:text-slate-500"
                 />
               </div>
 
@@ -1206,7 +1206,7 @@ export default function SuperAdminDashboard() {
                   placeholder="Apenas números ou formato CNPJ"
                   value={editCompanyForm.cnpj}
                   onChange={(e) => setEditCompanyForm({...editCompanyForm, cnpj: e.target.value})}
-                  className="w-full bg-slate-950 border border-slate-800 focus:border-violet-500 rounded-xl py-2.5 px-4 text-xs outline-none text-slate-200 placeholder:text-slate-655"
+                  className="w-full bg-slate-950 border border-slate-800 focus:border-violet-500 rounded-xl py-2.5 px-4 text-xs outline-none text-slate-200 placeholder:text-slate-500"
                 />
               </div>
 

@@ -121,6 +121,7 @@ export default function ModalAgendamentoVisita({
   const [isLoadingMaterials, setIsLoadingMaterials] = useState(true);
   const [isActionPending, setIsActionPending] = useState(false);
   const [materiaisPrevistos, setMateriaisPrevistos] = useState<Array<{ nome: string, quantidade: number }>>([]);
+  const [quantidadesLocais, setQuantidadesLocais] = useState<Record<string, string>>({});
   const [observacoesProjeto, setObservacoesProjeto] = useState('');
 
   // Campos Comuns de Visita
@@ -259,6 +260,11 @@ export default function ModalAgendamentoVisita({
     setMateriaisPrevistos((prev) => {
       const exists = prev.some((m) => m.nome === materialName);
       if (exists) {
+        setQuantidadesLocais((ql) => {
+          const copy = { ...ql };
+          delete copy[materialName];
+          return copy;
+        });
         return prev.filter((m) => m.nome !== materialName);
       } else {
         return [...prev, { nome: materialName, quantidade: 1 }];
@@ -797,7 +803,7 @@ export default function ModalAgendamentoVisita({
                     <button
                       type="button"
                       onClick={() => setIsEditingList(!isEditingList)}
-                      className="text-[10px] font-bold text-orange-655 hover:text-orange-705 bg-orange-50 hover:bg-orange-100/70 border border-orange-200/60 px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1"
+                      className="text-[10px] font-bold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100/70 border border-orange-200/60 px-2.5 py-1 rounded-lg transition-all cursor-pointer flex items-center gap-1"
                     >
                       {isEditingList ? (
                         <>
@@ -938,6 +944,7 @@ export default function ModalAgendamentoVisita({
                           materialOptions.map((mat) => {
                             const selected = materiaisPrevistos.some((m) => m.nome === mat.nome);
                             const currentQty = materiaisPrevistos.find((m) => m.nome === mat.nome)?.quantidade || 1;
+                            const inputValue = quantidadesLocais[mat.nome] !== undefined ? quantidadesLocais[mat.nome] : String(currentQty);
                             return (
                               <div
                                 key={mat.id}
@@ -969,8 +976,27 @@ export default function ModalAgendamentoVisita({
                                     <input
                                       type="number"
                                       min="1"
-                                      value={currentQty}
-                                      onChange={(e) => handleQuantityChange(mat.nome, parseInt(e.target.value) || 1)}
+                                      value={inputValue}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setQuantidadesLocais((prev) => ({ ...prev, [mat.nome]: val }));
+                                        const parsed = parseInt(val, 10);
+                                        if (!isNaN(parsed) && parsed >= 1) {
+                                          handleQuantityChange(mat.nome, parsed);
+                                        }
+                                      }}
+                                      onBlur={() => {
+                                        const val = quantidadesLocais[mat.nome];
+                                        const parsed = parseInt(val, 10);
+                                        if (isNaN(parsed) || parsed < 1) {
+                                          handleQuantityChange(mat.nome, 1);
+                                        }
+                                        setQuantidadesLocais((prev) => {
+                                          const copy = { ...prev };
+                                          delete copy[mat.nome];
+                                          return copy;
+                                        });
+                                      }}
                                       className="w-12 text-center text-xs font-bold font-mono bg-white border border-orange-200 text-orange-800 rounded-lg py-1 focus:ring-1 focus:ring-orange-300 outline-none"
                                     />
                                     <span className="text-[10px] text-orange-400 font-bold uppercase">un</span>
