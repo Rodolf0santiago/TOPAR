@@ -46,6 +46,7 @@ export const responsaveisService = {
         nome: p.nome_completo,
         email: p.email,
         telefone: '',
+        created_at: '',
         empresa_id: p.empresa_id
       }));
     }
@@ -60,6 +61,7 @@ export const responsaveisService = {
         nome: p.nome_completo,
         email: p.email,
         telefone: tech ? tech.telefone : '',
+        created_at: tech ? (tech as any).created_at || '' : '',
         empresa_id: p.empresa_id
       };
     }).sort((a, b) => a.nome.localeCompare(b.nome));

@@ -1,10 +1,3 @@
-export interface Profile {
-  id: string;
-  name: string;
-  role: 'admin' | 'tecnico' | 'mestre' | 'vendedor';
-  created_at: string;
-}
-
 export interface Lead {
   id: string;
   nome: string;
@@ -103,7 +96,9 @@ export interface Fatura {
   status: 'Pendente' | 'Paga' | 'Falhou';
   mp_payment_id: string | null;
   criado_em: string;
-}export interface Empresa {
+}
+
+export interface Empresa {
   id: string;
   nome_fantasia: string;
   cnpj: string;

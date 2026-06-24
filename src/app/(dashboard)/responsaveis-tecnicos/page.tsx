@@ -10,7 +10,6 @@ import {
   type PermissoesAbas
 } from '@/app/actions/usuarios';
 import { deleteResponsavelTecnico } from '@/app/actions/responsaveis';
-import { PerfilUsuario } from '@/types/database.types';
 import { supabase } from '@/lib/supabase';
 
 interface Colaborador {
