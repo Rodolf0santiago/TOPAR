@@ -799,6 +799,13 @@ export default function DashboardVisitas() {
     downloadCSV(`backup_visitas_${Date.now()}.csv`, headers, rows);
   };
 
+  // Counts for AgendaHeader tabs
+  const todasCount = activeRaw.length;
+  const agendadasCount = activeRaw.filter((v) => v.status_visita === 'Agendada').length;
+  const atrasadasCount = activeAtrasadas.length;
+  const realizadasCount = activeRaw.filter((v) => v.status_visita === 'Realizada').length;
+  const canceladasCount = activeRaw.filter((v) => v.status_visita === 'Cancelada').length;
+
   if (isLoading && isDbConfigured) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -823,7 +830,11 @@ export default function DashboardVisitas() {
           statusFilter={statusFilter}
           setStatusFilter={setStatusFilter}
           onAgendarClick={() => setIsAgendarModalOpen(true)}
-          atrasadasCount={activeAtrasadas.length}
+          todasCount={todasCount}
+          agendadasCount={agendadasCount}
+          atrasadasCount={atrasadasCount}
+          realizadasCount={realizadasCount}
+          canceladasCount={canceladasCount}
           onDownloadBackup={handleDownloadBackup}
         />
 

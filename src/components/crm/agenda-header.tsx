@@ -6,7 +6,11 @@ interface AgendaHeaderProps {
   statusFilter: string;
   setStatusFilter: (val: string) => void;
   onAgendarClick: () => void;
+  todasCount?: number;
+  agendadasCount?: number;
   atrasadasCount?: number;
+  realizadasCount?: number;
+  canceladasCount?: number;
   onDownloadBackup?: () => void;
 }
 
@@ -16,7 +20,11 @@ export default function AgendaHeader({
   statusFilter,
   setStatusFilter,
   onAgendarClick,
+  todasCount = 0,
+  agendadasCount = 0,
   atrasadasCount = 0,
+  realizadasCount = 0,
+  canceladasCount = 0,
   onDownloadBackup,
 }: AgendaHeaderProps) {
   return (
@@ -74,11 +82,11 @@ export default function AgendaHeader({
 
         <div className="flex gap-1.5 p-1.5 bg-gray-100 rounded-xl w-full md:w-auto overflow-x-auto">
           {[
-            { id: 'Todas', label: 'Todas' },
-            { id: 'Agendada', label: 'Agendadas' },
+            { id: 'Todas', label: `Todas (${todasCount})` },
+            { id: 'Agendada', label: `Agendadas (${agendadasCount})` },
             { id: 'Atrasada', label: `Atrasadas (${atrasadasCount})` },
-            { id: 'Realizada', label: 'Realizadas' },
-            { id: 'Cancelada', label: 'Canceladas' }
+            { id: 'Realizada', label: `Realizadas (${realizadasCount})` },
+            { id: 'Cancelada', label: `Canceladas (${canceladasCount})` }
           ].map((tab) => (
             <button
               key={tab.id}
