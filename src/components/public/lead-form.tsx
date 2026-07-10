@@ -61,7 +61,7 @@ export default function LeadForm() {
         </div>
         <h4 className="text-xl font-bold text-slate-200">Solicitação Enviada!</h4>
         <p className="text-sm text-slate-400 max-w-sm mx-auto">
-          Agradecemos seu contato. Nossa equipe analisará as dimensões informadas e retornará em até 24 horas úteis.
+          Agradecemos seu contato. Nossa equipe técnica avaliará sua solicitação e retornará em até 24 horas úteis.
         </p>
         <button
           onClick={() => setSuccess(false)}
@@ -142,7 +142,7 @@ export default function LeadForm() {
         </div>
         <div className="space-y-1.5">
           <label htmlFor="area_m2" className="text-xs font-semibold uppercase tracking-wider text-slate-400">
-            Área estimada (m²)
+            Área do Ambiente (m²)
           </label>
           <input
             type="number"
@@ -203,10 +203,11 @@ export default function LeadForm() {
             className="w-full bg-slate-950 border border-slate-800 focus:border-orange-500 focus:ring-1 focus:ring-orange-500 rounded-lg px-4 py-3 text-slate-200 outline-none transition-all text-sm appearance-none cursor-pointer"
           >
             <option value="" disabled>Selecione o serviço desejado</option>
-            <option value="Instalação Sistemas Solares">Instalação Sistemas Solares</option>
-            <option value="Limpeza de placas Solares">Limpeza de placas Solares</option>
-            <option value="Aquecimento de piso">Aquecimento de piso</option>
-            <option value="Carregamento Veicular">Carregamento Veicular</option>
+            <option value="Instalação de Ar Condicionado">Instalação de Ar Condicionado</option>
+            <option value="Manutenção Preventiva / Limpeza">Manutenção Preventiva / Limpeza</option>
+            <option value="Manutenção Corretiva / Conserto">Manutenção Corretiva / Conserto</option>
+            <option value="Contrato PMOC (Comercial)">Contrato PMOC (Comercial)</option>
+            <option value="Outros Serviços / Projetos">Outros Serviços / Projetos</option>
           </select>
           <svg className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
