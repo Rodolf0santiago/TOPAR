@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getMinhasEmpresas, selecionarEmpresa, type MinhaEmpresa } from '@/app/actions/empresa';
+import TopArLogo from '@/components/public/topar-logo';
 
 const ROLE_LABELS: Record<string, string> = {
   mestre:    'Conta Mestra',
@@ -152,12 +153,12 @@ export default function SelecionarEmpresaPage() {
         {/* Header */}
         <div className="text-center mb-10">
           <div className="flex justify-center mb-5">
-            <img src="/logo-hubly.png" alt="HUBLY PRO" className="h-16 w-auto object-contain" />
+            <TopArLogo className="mx-auto shadow-lg border border-slate-100" />
           </div>
 
-          <div className="inline-flex items-center gap-2 bg-[#0a4ee4]/8 border border-[#0a4ee4]/20 rounded-full px-4 py-1.5 mb-4">
-            <div className="w-2 h-2 bg-[#0a4ee4] rounded-full animate-pulse" />
-            <span className="text-xs font-bold text-[#0a4ee4] tracking-wide">SESSÃO ATIVA</span>
+          <div className="inline-flex items-center gap-2 bg-[#F26522]/8 border border-[#F26522]/20 rounded-full px-4 py-1.5 mb-4">
+            <div className="w-2 h-2 bg-[#F26522] rounded-full animate-pulse" />
+            <span className="text-xs font-bold text-[#F26522] tracking-wide">SESSÃO ATIVA</span>
           </div>
 
           <h1 className="text-2xl font-black text-gray-900 mb-1">Olá, {userName.split(' ')[0]}!</h1>

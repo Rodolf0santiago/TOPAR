@@ -2,45 +2,7 @@ import React from 'react';
 import LeadForm from '@/components/public/lead-form';
 import WhatsAppButton from '@/components/public/whatsapp-button';
 
-// Helper component for the vector-based TOP AR logo
-const TopArLogo = ({ className = '' }: { className?: string }) => (
-  <div className={`flex items-center gap-3 ${className}`}>
-    {/* SVG Pinwheel Logo */}
-    <svg viewBox="0 0 100 100" className="w-12 h-12 drop-shadow-[0_0_12px_rgba(242,101,34,0.25)]">
-      <defs>
-        {/* Curved arrow pointing to center (0,0) */}
-        <path
-          id="arrow-head"
-          d="M -35,-5 C -25,-18 -15,-15 -8,-8 L -15,-3 L -6,-6 L -3,-15 Z"
-        />
-      </defs>
-      <g transform="translate(50,50)">
-        {/* 4 Blue Arrows (Cardinal) */}
-        <use href="#arrow-head" fill="#38BDF8" transform="rotate(0)" />
-        <use href="#arrow-head" fill="#38BDF8" transform="rotate(90)" />
-        <use href="#arrow-head" fill="#38BDF8" transform="rotate(180)" />
-        <use href="#arrow-head" fill="#38BDF8" transform="rotate(270)" />
-        
-        {/* 4 Orange/Red Arrows (Diagonal) */}
-        <use href="#arrow-head" fill="#F26522" transform="rotate(45)" />
-        <use href="#arrow-head" fill="#F26522" transform="rotate(135)" />
-        <use href="#arrow-head" fill="#F26522" transform="rotate(225)" />
-        <use href="#arrow-head" fill="#F26522" transform="rotate(315)" />
-      </g>
-    </svg>
-    
-    {/* Text Logo */}
-    <div className="flex flex-col justify-center leading-none">
-      <div className="flex items-baseline">
-        <span className="text-2xl font-black tracking-tight text-[#F26522]">TOP</span>
-        <span className="text-2xl font-black tracking-tight text-white ml-0.5">AR</span>
-      </div>
-      <span className="text-[7.5px] font-bold tracking-[0.3em] text-[#38BDF8] uppercase mt-1">
-        Climatização
-      </span>
-    </div>
-  </div>
-);
+import TopArLogo from '@/components/public/topar-logo';
 
 export default function LandingPage() {
   const brands = [

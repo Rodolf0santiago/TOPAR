@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getMinhasEmpresas, selecionarEmpresa } from '@/app/actions/empresa';
+import TopArLogo from '@/components/public/topar-logo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -109,15 +110,15 @@ export default function LoginPage() {
 
       <div className="max-w-md w-full bg-white border border-gray-200/80 rounded-3xl p-8 shadow-xl backdrop-blur-sm relative overflow-hidden">
         {/* Indicador de marca superior */}
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#0a4ee4] to-amber-500" />
+        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#F26522] to-[#1A3B68]" />
 
         {/* Cabeçalho */}
         <div className="text-center mb-8">
           <div className="flex justify-center mb-4">
-            <img src="/logo-hubly.png" alt="HUBLY PRO Logo" className="h-20 w-auto object-contain" />
+            <TopArLogo className="mx-auto shadow-lg border border-slate-100" />
           </div>
-          <h1 className="text-2xl font-black tracking-tight text-gray-900">Central HUBLY PRO</h1>
-          <p className="text-xs text-gray-500 mt-1">Painel de Identificação — CRM Hubly Pro</p>
+          <h1 className="text-2xl font-black tracking-tight text-gray-900">Central de Acesso</h1>
+          <p className="text-xs text-gray-500 mt-1.5">Painel de Identificação — CRM TOP AR</p>
         </div>
 
         {errorMsg && (

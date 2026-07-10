@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { usePathname, useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { getMinhasPermissoesAbas, type PermissoesAbas } from '@/app/actions/usuarios';
+import TopArLogo from '@/components/public/topar-logo';
 
 const getStaticPermissions = (roleName: string | null): PermissoesAbas => {
   const r = roleName || 'admin';
@@ -298,7 +299,7 @@ export default function DashboardLayout({
           <div className="p-6 space-y-8">
             {/* Logo */}
             <a href={permissions.dashboard ? "/dashboard" : "/visitas"} className="flex items-center gap-2.5 group">
-              <img src="/logo-hubly.png" alt="HUBLY PRO" className="h-20 w-auto object-contain" />
+              <TopArLogo className="w-full shadow-sm border border-slate-100" />
             </a>
 
             {/* Navigation */}
