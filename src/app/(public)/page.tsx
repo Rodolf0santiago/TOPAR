@@ -80,6 +80,9 @@ export default function LandingPage() {
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-[#38BDF8]/20 text-[#38BDF8] text-xs font-bold shadow-sm">
               HITACHI
             </div>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900/80 border border-[#EF4444]/20 text-[#EF4444] text-xs font-bold shadow-sm">
+              FUJITSU
+            </div>
             <span className="text-xs text-slate-500 font-bold">& mais de 10 marcas</span>
           </div>
 
